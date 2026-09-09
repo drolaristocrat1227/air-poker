@@ -1,0 +1,2600 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="app-version" content="1.9.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#04141a">
+<title>エア・ポーカー</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Oswald:wght@300;500;700&display=swap">
+<style>
+/* ============================================================
+   エア・ポーカー ─ 水没した監視塔の潜水計器盤
+   単一テーマ（深水）で意図的に統一。背景・文字色はすべて明示。
+   ============================================================ */
+:root{
+  --abyss:#04141a;      /* 最深部 */
+  --water:#0a262d;      /* 盤面 */
+  --water-2:#0f363d;    /* 隆起面 */
+  --line:#1e5560;
+  --bone:#e4ece9;       /* 文字（緑寄りの骨色） */
+  --muted:#7c9b9d;
+  --dim:#4d6b6f;
+  --brass:#e0a742;      /* エア＝琥珀 */
+  --brass-d:#8a6420;
+  --verd:#49c1ae;       /* 緑青 */
+  --blood:#c33c33;      /* 危険・天災 */
+  --blood-d:#5e1b17;
+  --f-disp:"Shippori Mincho B1",serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif;
+  --f-num:"Oswald","Zen Kaku Gothic New",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;max-width:100%;height:100%;overflow:hidden;
+  overscroll-behavior:none}
+body{
+  background:var(--abyss);
+  color:var(--bone);
+  font-family:var(--f-body);
+  font-size:15px;line-height:1.6;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
+  -webkit-user-select:none;user-select:none;          /* 長押しの文字選択を止める */
+  -webkit-touch-callout:none;
+}
+#s-rules{-webkit-user-select:text;user-select:text}    /* ルールだけは選択・コピー可 */
+.stage,#s-rules,#s-title,#s-over,.log{overscroll-behavior:contain}
+button{font-family:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--verd);outline-offset:2px}
+
+#bg{position:fixed;inset:0;z-index:0;display:block}
+#veil{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(120% 88% at 50% 42%,
+    rgba(0,0,0,0) 32%, rgba(0,0,0,.30) 62%, rgba(0,0,0,.80) 100%)}
+#app{position:relative;z-index:1;height:100vh;height:100dvh;max-width:520px;margin:0 auto;
+  display:flex;flex-direction:column;overflow:hidden}
+#strip-opp{padding-top:calc(8px + env(safe-area-inset-top,0px))}
+.strip.me{padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+#s-title,#s-over{padding-top:calc(24px + env(safe-area-inset-top,0px));
+  padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+#s-rules{padding-top:calc(18px + env(safe-area-inset-top,0px));
+  padding-bottom:calc(30px + env(safe-area-inset-bottom,0px))}
+
+.screen{display:none;flex:1;min-width:0;min-height:0;flex-direction:column}
+.screen.on{display:flex}
+
+/* ---------- 共通パーツ ---------- */
+.plate{
+  font-family:var(--f-num);font-weight:500;
+  background:linear-gradient(158deg,#2c3d40,#152629 46%,#22383b);
+  border:1px solid #3a5459;border-radius:2px;color:#d3e2df;
+  text-shadow:0 1px 0 rgba(255,255,255,.16),0 -1px 0 rgba(0,0,0,.65);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -2px 4px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.5);
+}
+.btn{
+  min-width:0;overflow-wrap:anywhere;border:1px solid var(--line);background:linear-gradient(180deg,var(--water-2),var(--water));
+  color:var(--bone);border-radius:3px;padding:12px 14px;font-size:15px;font-weight:500;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:background .12s,border-color .12s,transform .06s}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.32;cursor:default}
+.btn.pri{border-color:var(--brass-d);background:linear-gradient(180deg,#3a2e14,#241c0c);color:var(--brass)}
+.btn.dgr{border-color:#6d2822;background:linear-gradient(180deg,#33130f,#200b09);color:#e08c84}
+.btn.gho{background:transparent;border-color:var(--dim);color:var(--muted)}
+
+/* ---------- タイトル ---------- */
+#s-title{justify-content:flex-start;padding:24px 22px;gap:24px;overflow-y:auto}
+#s-title>:first-child{margin-top:auto}
+#s-title>:last-child{margin-bottom:auto}
+.tt-mark{display:flex;align-items:center;gap:12px}
+.tt-mark i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line))}
+.tt-mark i:first-child{background:linear-gradient(90deg,var(--line),transparent)}
+.tt-mark span{font-family:var(--f-num);font-size:11px;letter-spacing:.3em;color:var(--dim)}
+h1.tt{font-family:var(--f-disp);font-weight:800;font-size:clamp(30px,10.4vw,54px);line-height:1.1;
+  margin:0;text-align:center;letter-spacing:.02em;text-wrap:balance;max-width:100%;
+  background:linear-gradient(180deg,#f0f6f3 30%,#7fb9b2 68%,#2c6a6c);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 10px rgba(0,0,0,.7))}
+.tt-sub{text-align:center;color:var(--muted);font-size:13px;margin-top:10px;line-height:1.8}
+.tt-sub b{color:var(--brass);font-weight:500}
+.menu{display:flex;flex-direction:column;gap:9px}
+.menu h2{font-family:var(--f-disp);font-size:14px;margin:0;color:var(--verd);font-weight:700;
+  letter-spacing:.08em}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;
+  border:1px solid var(--line);border-radius:3px;padding:13px 15px;background:rgba(15,54,61,.5);
+  text-align:left;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.mrow:active{background:rgba(21,72,80,.7)}
+.mrow strong{display:block;font-size:16px;font-weight:700}
+.mrow small{color:var(--muted);font-size:12px;display:block;margin-top:2px;line-height:1.5}
+.mrow em{font-family:var(--f-num);font-style:normal;font-size:11px;letter-spacing:.18em;color:var(--brass);
+  border:1px solid var(--brass-d);border-radius:2px;padding:3px 7px;white-space:nowrap}
+
+/* ---------- ルール ---------- */
+#s-rules{padding:18px 20px 30px;overflow-y:auto}
+#s-rules.on{display:block}
+#s-rules h2{font-family:var(--f-disp);font-size:21px;margin:0 0 4px}
+#s-rules h3{font-family:var(--f-disp);font-size:15px;color:var(--verd);margin:22px 0 6px;
+  padding-bottom:5px;border-bottom:1px solid var(--line)}
+#s-rules p,#s-rules li{font-size:13.5px;color:#c3d4d1;line-height:1.85}
+#s-rules ul{padding-left:1.15em;margin:6px 0}
+#s-rules b{color:var(--brass);font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0}
+.tbl th,.tbl td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+.tbl th{background:rgba(21,72,80,.5);color:var(--verd);font-weight:500}
+.tbl td{overflow-wrap:anywhere}
+.tbl td.n{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- 対戦画面 ---------- */
+.strip{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:8px 12px;background:linear-gradient(180deg,rgba(10,38,45,.94),rgba(4,20,26,.9));
+  border-bottom:1px solid var(--line)}
+.strip.me{border-bottom:none;border-top:1px solid var(--line);
+  background:linear-gradient(0deg,rgba(10,38,45,.94),rgba(4,20,26,.9))}
+.strip .who{font-family:var(--f-disp);font-size:14px;font-weight:700;white-space:nowrap}
+.strip .who small{display:block;font-family:var(--f-num);font-size:9px;letter-spacing:.2em;
+  color:var(--dim);font-weight:300}
+.gauges{display:flex;flex-direction:column;gap:4px;min-width:0}
+.grow{display:grid;grid-template-columns:34px minmax(0,1fr) 38px;gap:7px;align-items:center}
+.grow .lab{font-family:var(--f-num);font-size:9px;letter-spacing:.1em;color:var(--dim)}
+.bar{height:7px;border-radius:1px;background:#07222a;border:1px solid #1a4a54;overflow:hidden}
+.bar>i{display:block;height:100%;transition:width .25s linear}
+.bar.air>i{background:linear-gradient(90deg,var(--brass-d),var(--brass))}
+.bar.o2>i{background:linear-gradient(90deg,#1d6f7d,var(--verd))}
+.bar.o2.low>i{background:linear-gradient(90deg,#7a1f19,var(--blood))}
+.grow.x2 .lab{color:var(--brass)}
+.bar.o2.x2>i{background:linear-gradient(90deg,#2f7f86,#e0a742)}
+.bar.o2.x2.low>i{background:linear-gradient(90deg,#8a3a18,var(--blood))}
+.gval{font-family:var(--f-num);font-weight:500;font-size:13px;font-variant-numeric:tabular-nums;
+  text-align:right}
+.gval.air{color:var(--brass)}
+.gval.o2{color:var(--verd)}
+.gval.o2.low{color:var(--blood)}
+.strip .badge{font-family:var(--f-num);font-size:10px;letter-spacing:.1em;color:var(--muted);
+  border:1px solid var(--line);border-radius:2px;padding:3px 6px;text-align:center;white-space:nowrap}
+.strip.danger{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{filter:none}50%{filter:brightness(1.5) sepia(.6) hue-rotate(-40deg) saturate(3)}}
+
+/* 場 */
+.field{padding:10px 12px;border-bottom:1px solid var(--line);
+  background:radial-gradient(120% 100% at 50% 0%,rgba(21,72,80,.42),transparent 70%)}
+.fhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fhead .rd{font-family:var(--f-disp);font-size:15px;font-weight:700}
+.fhead .rd b{color:var(--brass);font-family:var(--f-num);font-size:19px}
+.pot{font-family:var(--f-num);font-size:11px;color:var(--muted);letter-spacing:.1em}
+.pot b{color:var(--brass);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.targets{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;margin-top:8px}
+.tgt{padding:5px 4px 7px;text-align:center}
+.tgt .cap{font-family:var(--f-num);font-size:9px;letter-spacing:.18em;color:var(--dim);display:block}
+.tgt .num{font-family:var(--f-num);font-weight:500;font-size:34px;line-height:1.05;display:block;
+  font-variant-numeric:tabular-nums}
+.tgt.mine .num{color:var(--verd)}
+.tgt.opp .num{color:#d8b06a}
+.tgt .num.q{color:var(--dim)}
+.vs{font-family:var(--f-disp);font-size:12px;color:var(--dim)}
+.field.compact .tgt .num{font-size:24px}
+.field.compact .targets{margin-top:4px}
+
+/* 段 */
+.stage{flex:1;min-height:0;overflow-y:auto;padding:12px 12px 20px;
+  display:flex;flex-direction:column;gap:12px}
+.panel{display:none;flex-direction:column;gap:12px}
+.panel.on{display:flex}
+.ptitle{font-family:var(--f-disp);font-size:16px;font-weight:700;margin:0}
+.ptitle span{color:var(--muted);font-size:12px;font-family:var(--f-body);font-weight:400;margin-left:8px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.75}
+.note b{color:var(--brass);font-weight:500}
+
+/* 数字プレート選択 */
+.plates{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:9px}
+.pbtn{padding:13px 6px 11px;text-align:center}
+.pbtn .n{font-size:32px;line-height:1;display:block;font-variant-numeric:tabular-nums}
+.pbtn .h{display:block;font-family:var(--f-body);font-size:10px;color:var(--muted);margin-top:5px}
+.pbtn.gone{opacity:.22;filter:grayscale(1)}
+
+/* ベット */
+.betgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.betgrid .wide{grid-column:1/-1}
+.money{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center;text-align:center;
+  border:1px solid var(--line);border-radius:3px;padding:9px;background:rgba(10,38,45,.6)}
+.money .c{font-family:var(--f-num);font-size:22px;color:var(--brass);font-variant-numeric:tabular-nums}
+.money .k{font-family:var(--f-num);font-size:9px;letter-spacing:.16em;color:var(--dim);display:block}
+.money .mid{font-family:var(--f-disp);font-size:11px;color:var(--dim)}
+.clock{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.clock .lab{font-family:var(--f-num);font-size:9px;letter-spacing:.14em;color:var(--dim)}
+.clock .bar{height:5px}
+.clock .bar>i{background:linear-gradient(90deg,#1d6f7d,var(--verd));transition:width .12s linear}
+.clock.warn .bar>i{background:linear-gradient(90deg,#7a1f19,var(--blood))}
+.clock .t{font-family:var(--f-num);font-size:14px;font-variant-numeric:tabular-nums;min-width:50px;
+  text-align:right}
+.clock.warn .t{color:var(--blood)}
+.raisebox{border:1px solid var(--line);border-radius:3px;padding:10px 12px 12px;display:none;
+  flex-direction:column;gap:9px;background:rgba(10,38,45,.6)}
+.raisebox.on{display:flex}
+.raisebox .rv{display:flex;justify-content:space-between;align-items:baseline}
+.raisebox .rv span{font-size:12px;color:var(--muted)}
+.raisebox .rv b{font-family:var(--f-num);font-size:26px;color:var(--brass);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:#e0a742;height:34px;touch-action:none}
+.quick{display:flex;gap:6px}
+.quick button{flex:1;padding:7px 0;font-size:12px;font-family:var(--f-num);letter-spacing:.06em}
+.log{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:3px;
+  max-height:120px;overflow-y:auto}
+.log div{font-size:12px;color:var(--muted);display:flex;gap:7px;min-width:0}
+.log div span{min-width:0;overflow-wrap:anywhere}
+.log div b{color:var(--bone);font-weight:500;flex:0 0 auto}
+.log div.hi{color:var(--brass)}
+
+/* 役作り */
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.sum div{background:var(--water);padding:7px 4px;text-align:center}
+.sum.blind{grid-template-columns:1fr}
+.sum.blind div:nth-child(n+2){display:none}
+.blindnote{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6;
+  border:1px dashed var(--dim);border-radius:3px;padding:7px 9px}
+.blindnote b{color:var(--brass);font-weight:500}
+.sum .k{font-family:var(--f-num);font-size:9px;letter-spacing:.16em;color:var(--dim);display:block}
+.sum .v{font-family:var(--f-num);font-size:24px;line-height:1.15;font-variant-numeric:tabular-nums}
+.sum .v.ok{color:var(--verd)}
+.sum .v.bad{color:var(--blood)}
+.slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:290px;
+  margin:0 auto;width:100%}
+.slot{aspect-ratio:5/7;border:1px dashed var(--dim);border-radius:3px;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;color:var(--dim);
+  font-family:var(--f-num);font-size:11px;background:rgba(7,34,42,.5)}
+.slot.f{border:1px solid #b9c9c6;border-style:solid;background:linear-gradient(170deg,#f4f7f5,#cfdad6);
+  color:#12262a;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.slot.f .r{font-family:var(--f-num);font-weight:500;font-size:20px;line-height:1}
+.slot.f .s{font-size:15px;line-height:1}
+.slot.f.red{color:#a3231c}
+.handname{text-align:center;font-family:var(--f-disp);font-size:17px;font-weight:700;min-height:26px}
+.handname.none{color:var(--dim);font-family:var(--f-body);font-size:12px;font-weight:400}
+.deck{display:flex;flex-direction:column;gap:3px}
+.drow{display:grid;grid-template-columns:15px repeat(13,minmax(0,1fr));gap:2px;align-items:center}
+.drow .sl{font-size:12px;text-align:center;line-height:1;color:#b6cbc8}
+.drow .sl.red{color:#d97a72}
+.dh{font-family:var(--f-num);font-size:10px;color:var(--muted);text-align:center;line-height:1}
+.cel{aspect-ratio:1/1.55;min-height:30px;border:1px solid #2a4a50;border-radius:2px;background:#0d2f36;
+  display:flex;align-items:center;justify-content:center;font-family:var(--f-num);font-size:11px;
+  color:#9dbdba;padding:0;line-height:1}
+.cel.red{color:#d97a72}
+.cel.sel{background:linear-gradient(170deg,#f4f7f5,#cfdad6);color:#12262a;border-color:#fff;
+  box-shadow:0 0 0 1px var(--verd)}
+.cel.sel.red{color:#a3231c}
+.cel.used{background:#061a1f;border-color:#12333a;color:#2c4a4e;position:relative}
+.cel.used::after{content:"";position:absolute;left:14%;right:14%;top:48%;height:1px;background:#2c4a4e}
+.foot2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.foot3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+details.info{border:1px solid var(--line);border-radius:3px;padding:8px 10px;background:rgba(10,38,45,.5)}
+details.info summary{font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--f-num);
+  letter-spacing:.06em}
+details.info .body{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.9}
+details.info .body b{color:var(--bone);font-weight:500}
+.usedline{word-break:break-word}
+.usedline .r{color:#d97a72}
+
+/* 結果 */
+.sd{border:1px solid var(--line);border-radius:3px;padding:10px 11px;background:rgba(10,38,45,.6)}
+.sd.win{border-color:var(--brass);box-shadow:0 0 18px rgba(224,167,66,.13)}
+.sd.lose{opacity:.7}
+.sd .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.sd .nm{font-family:var(--f-disp);font-size:14px;font-weight:700}
+.sd .hn{font-family:var(--f-disp);font-size:14px;color:var(--verd);text-align:right}
+.sd .hn.miss{color:var(--blood)}
+.sd .cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;max-width:240px}
+.mini{aspect-ratio:5/7;border-radius:2px;background:linear-gradient(170deg,#f4f7f5,#cfdad6);
+  color:#12262a;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--f-num);line-height:1}
+.mini.red{color:#a3231c}
+.mini .r{font-size:16px;font-weight:500}
+.mini .s{font-size:12px}
+.mini.dup{box-shadow:0 0 0 2px var(--blood)}
+.verdict{text-align:center;font-family:var(--f-disp);font-size:24px;font-weight:800;padding:4px 0}
+.verdict.w{color:var(--brass)}
+.verdict.l{color:var(--blood)}
+.verdict.d{color:var(--muted)}
+.tensai{border:1px solid var(--blood);background:linear-gradient(180deg,rgba(90,25,20,.55),rgba(30,8,6,.5));
+  border-radius:3px;padding:10px 12px;text-align:center}
+.tensai .t{font-family:var(--f-disp);font-size:19px;font-weight:800;color:#f0837a;letter-spacing:.1em}
+.tensai .d{font-size:12px;color:#e3b3ae;margin-top:3px;line-height:1.7}
+.pain{border:1px dashed var(--blood-d);border-radius:3px;padding:9px 11px;text-align:center;
+  font-size:12px;color:#b0837e;line-height:1.7}
+.pain b{font-family:var(--f-disp);font-size:15px;color:#e08c84;font-weight:700;letter-spacing:.06em}
+
+/* 目隠し */
+#panel-pass{flex:1;align-items:center;justify-content:center;text-align:center;gap:22px;padding:30px 0}
+#panel-pass .big{font-family:var(--f-disp);font-size:25px;font-weight:800;line-height:1.5}
+#panel-pass .sm{color:var(--muted);font-size:13px;line-height:1.8}
+
+/* 決着 */
+#s-over{justify-content:flex-start;align-items:center;padding:26px 22px;gap:18px;
+  text-align:center;overflow-y:auto}
+#s-over>:first-child{margin-top:auto}
+#s-over>:last-child{margin-bottom:auto}
+#s-over .res{font-family:var(--f-disp);font-size:clamp(30px,10vw,44px);font-weight:800;line-height:1.2}
+#s-over .res.w{color:var(--brass)}
+#s-over .res.l{color:var(--blood)}
+#s-over .res.d{color:var(--muted)}
+#s-over .cause{color:var(--muted);font-size:13.5px;line-height:1.9;max-width:32em}
+.stats{width:100%;max-width:340px;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.stats div{display:flex;justify-content:space-between;padding:8px 12px;font-size:13px;
+  border-bottom:1px solid rgba(30,85,96,.5)}
+.stats div:last-child{border-bottom:none}
+.stats b{font-family:var(--f-num);font-weight:500;color:var(--brass);font-variant-numeric:tabular-nums}
+.overbtns{display:flex;flex-direction:column;gap:9px;width:100%;max-width:340px}
+
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-top:1px solid var(--line);padding-top:12px;margin-top:2px;flex-wrap:wrap}
+.appbar .ver{font-family:var(--f-num);font-size:11px;letter-spacing:.12em;color:var(--dim)}
+.appbar .ver b{color:var(--muted);font-weight:500}
+.appbar button{border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:3px;padding:7px 12px;font-size:12px}
+.appbar button:active{background:rgba(21,72,80,.6)}
+.install{font-size:11.5px;color:var(--dim);line-height:1.7;width:100%}
+.legal{font-size:10.5px;color:#3d585c;line-height:1.7;width:100%;
+  border-top:1px solid rgba(30,85,96,.45);padding-top:9px}
+.install b{color:var(--muted);font-weight:500}
+.update{border:1px solid var(--brass-d);border-radius:3px;padding:11px 13px;
+  background:linear-gradient(180deg,rgba(58,46,20,.85),rgba(36,28,12,.85));
+  display:none;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.update.on{display:flex}
+.update .t{font-size:13px;color:var(--brass);line-height:1.6;flex:1;min-width:150px}
+.update .t small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.update button{border:1px solid var(--brass-d);border-radius:3px;padding:9px 14px;
+  background:linear-gradient(180deg,#4a3a18,#2c220e);color:var(--brass);font-size:13px;font-weight:500}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:20;
+  background:rgba(4,20,26,.96);border:1px solid var(--brass-d);color:var(--brass);
+  padding:9px 16px;border-radius:3px;font-size:13px;pointer-events:none;opacity:0;
+  transition:opacity .2s;max-width:86%;text-align:center;line-height:1.6}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s!important;transition-duration:.001s!important}
+}
+@media (max-height:660px){
+  .tgt .num{font-size:28px}
+  .strip{padding:6px 12px}
+  .field{padding:8px 12px}
+}
+</style>
+
+<canvas id="bg"></canvas>
+<div id="veil"></div>
+<div id="app">
+
+  <!-- ══════════ タイトル ══════════ -->
+  <section id="s-title" class="screen on">
+    <div>
+      <div class="tt-mark"><i></i><span>PANOPTICON</span><i></i></div>
+      <h1 class="tt">エア・ポーカー</h1>
+      <p class="tt-sub">水没した監視塔、足枷、<b>25枚のエア</b>。<br>賭けるのは金ではない。呼吸だ。</p>
+    </div>
+
+    <div class="update" id="update-bar">
+      <span class="t" id="update-txt">新しい版があります<small>読み込み直すと最新になります</small></span>
+      <button id="update-go">今すぐ更新</button>
+    </div>
+
+    <div class="menu">
+      <h2>盤面</h2>
+      <button class="mrow" id="opt-blind">
+        <span><strong id="opt-blind-t">盤面あり ─ 標準</strong><small id="opt-blind-d">合計数と使用済みの札が表示される。まずはこちらで。</small></span>
+        <em id="opt-blind-e">STD</em>
+      </button>
+    </div>
+
+    <div class="menu">
+      <h2>CPU 戦</h2>
+      <button class="mrow" data-start="cpu:easy">
+        <span><strong>初 級 ─ 下っ端</strong><small>読みが甘く、賭けも粗い。ルールを覚えるならここから。</small></span>
+        <em>EASY</em>
+      </button>
+      <button class="mrow" data-start="cpu:normal">
+        <span><strong>中 級 ─ 立会人</strong><small>最善手をほぼ外さない。ベットの引き際も心得ている。</small></span>
+        <em>NORMAL</em>
+      </button>
+      <button class="mrow" data-start="cpu:hard">
+        <span><strong>上 級 ─ 梟</strong><small>常に最善手。勝てると読めば<b>天災</b>を狙って札を選ぶ。</small></span>
+        <em>HARD</em>
+      </button>
+    </div>
+
+    <div class="menu">
+      <h2>対人戦</h2>
+      <button class="mrow" data-start="pvp">
+        <span><strong>2人で交代</strong><small>1台の端末を回して遊ぶ。手番の切れ目に目隠し画面が入る。</small></span>
+        <em>2P</em>
+      </button>
+      <button class="mrow" data-rules="1">
+        <span><strong>ルールを読む</strong><small>役作り・天災・溺死判定まで全て。初回は一読を推奨。</small></span>
+        <em>?</em>
+      </button>
+    </div>
+
+    <div class="appbar">
+      <span class="ver">VERSION <b id="ver-txt">1.6.0</b></span>
+      <button id="ver-check">更新を確認</button>
+      <span class="install" id="install-hint"></span>
+      <span class="legal">非公式・非営利のファン制作です。『嘘喰い』（迫稔雄／集英社）の作中ゲームを
+        題材にしています。原作に関する権利はすべて権利者に帰属します。</span>
+    </div>
+  </section>
+
+  <!-- ══════════ ルール ══════════ -->
+  <section id="s-rules" class="screen">
+    <h2>エア・ポーカー 詳細規則</h2>
+    <p class="note">1階では呼吸のための空気を賭け合い、2階では実物の札を持たずにポーカーを行う。二重の意味を持つ勝負である。</p>
+
+    <h3>盤面と勝敗</h3>
+    <ul>
+      <li>両者は空気ボンベを兼ねた<b>エア25枚</b>を持つ。エアは賭け札であり、同時に命そのもの。</li>
+      <li>勝負は<b>最大5回戦</b>。途中でエアが尽きた者は溺死し、その時点で敗北。</li>
+      <li>5回戦を終えて双方生存していれば、残りエアの多い方の勝ち。</li>
+    </ul>
+
+    <h3>呼吸 ── 迷う者ほど早く沈む</h3>
+    <ul>
+      <li>盤面に着いている間、酸素は減り続ける。エア1枚は<b>100秒</b>ぶんの酸素にあたる。</li>
+      <li><b>自分の選択が済むまでは、その減りが2倍になる。</b>数字を選ぶ間、自分のベット手番、役を提示するまで ── 迷えば迷うほど息を失う。</li>
+      <li>決めてしまえば通常の速さに戻る。<b>速く決める者はエアを残す。</b></li>
+      <li>降りればその回戦の役作りを丸ごと省ける。勝てない回戦を捨てるのも、息を守る立派な手である。</li>
+      <li>酸素が尽きると自動的にエアを<b>1枚消費</b>して補充する。消費したエアは二度と賭けられない。</li>
+      <li>手元のエアが0枚のまま回戦を終えると溺死。（本来は「体が椅子を10秒離れた時点」で敗北とされる）</li>
+    </ul>
+
+    <h3>1階 ─ 数字とベット</h3>
+    <ul>
+      <li>各自に<b>5枚の金属板</b>が配られる。刻まれているのは数字だけ。毎回戦1枚ずつ、<b>30秒以内</b>に場にオープンする。時間が来れば1枚が勝手に押し出される。</li>
+      <li>数字は <b>6〜64</b> の全域から無作為に配られる。端に寄った数字ほど組める役は限られ、札が減れば<b>組めなくなる</b>。どの順で切るかが勝負を決める。</li>
+      <li>参加料は1回戦目が<b>1エア</b>、以降1エアずつ増える（1・2・3・4・5）。</li>
+      <li>ベットタイムは<b>30秒</b>。一度にレイズできる枚数は<b>場のエア総数の半分</b>まで。時間が来たらそれ以上レイズできない。</li>
+    </ul>
+
+    <h3>2階 ─ 役作り</h3>
+    <ul>
+      <li>ジョーカーを除く<b>1セットのトランプ</b>から5枚を選び、その合計数を<b>オープンした数字に一致</b>させる。</li>
+      <li>制限時間は<b>100秒</b>。作った役の強弱で勝敗が決まる。</li>
+      <li>A=1、J=11、Q=12、K=13として合計する。役の強さは通常のポーカーに準じ、A は最強のランクとして扱う。</li>
+      <li>一度使った札はその後の勝負で使えない。回を重ねるごとに選択肢は枯れていく。</li>
+      <li><b>ミス</b>＝100秒超過／合計数の不一致／使用済み札の再使用。ミスした側はその回戦を落とす。双方ミスなら再度100秒が与えられる。</li>
+    </ul>
+
+    <h3>天災</h3>
+    <p>互いが選んだ札が<b>1枚以上重複</b>していた場合に発動。その勝負で負けた側は、<b>奪われたエアと同数の残りエア</b>をさらに失う。失われたエアは勝者の手に渡らず、そのまま<b>水中へ消える</b>。</p>
+
+    <h3>暗算モード（原作準拠）</h3>
+    <p>タイトル画面の「盤面」を切り替えると、2階の条件が原作どおりになる。</p>
+    <ul>
+      <li>選んだ札の<b>合計数が表示されない</b>。自分で数えるほかない。</li>
+      <li>使い切った札に印がつかない。<b>どれを使ったかは記憶するしかない</b>。互いの使用済みも明かされない。</li>
+      <li>使用済みの札も選べてしまう。出した瞬間に<b>ミス</b>となり、その回戦を落とす。</li>
+      <li>CPU もこのモードでは記憶違いや計算違いを起こす。梟でさえ完全ではない。</li>
+    </ul>
+
+    <h3>ストレートフラッシュが出る合計数</h3>
+    <p>連続する5枚の合計は必ず5の倍数になる。<b>15・20・25・30・35・40・45・50・55</b>、そして 10-J-Q-K-A の<b>47</b>。この10個だけがストレートフラッシュを組みうる数字である。手元にこの数字があるかどうかは運であり、来なければ別の勝ち方を探すことになる。</p>
+    <p>反対に、<b>6</b> は A・A・A・A・2 の一通り、<b>64</b> は K・K・K・K・Q の一通りしかない。強い役だが、その札が1枚でも欠ければ二度と組めない。</p>
+
+    <h3>役の強さ</h3>
+    <table class="tbl">
+      <tr><th>役</th><th>説明</th></tr>
+      <tr><td>ストレートフラッシュ</td><td>同じスートで連続する5枚（10-J-Q-K-A はロイヤル）</td></tr>
+      <tr><td>フォーカード</td><td>同ランク4枚</td></tr>
+      <tr><td>フルハウス</td><td>3枚＋2枚</td></tr>
+      <tr><td>フラッシュ</td><td>同じスート5枚</td></tr>
+      <tr><td>ストレート</td><td>連続する5枚（A-2-3-4-5 は5ハイの最弱）</td></tr>
+      <tr><td>スリーカード / ツーペア / ワンペア / ハイカード</td><td>以下同様</td></tr>
+    </table>
+
+    <div style="margin-top:22px"><button class="btn" style="width:100%" data-back="1">戻る</button></div>
+  </section>
+
+  <!-- ══════════ 対戦 ══════════ -->
+  <section id="s-game" class="screen">
+
+    <div class="strip" id="strip-opp">
+      <div class="who" id="opp-name">ラロ<small>OPPONENT</small></div>
+      <div class="gauges">
+        <div class="grow"><span class="lab">AIR</span><div class="bar air"><i id="opp-air-bar"></i></div><span class="gval air" id="opp-air">25</span></div>
+        <div class="grow"><span class="lab" id="opp-o2-lab">O2</span><div class="bar o2"><i id="opp-o2-bar"></i></div><span class="gval o2" id="opp-o2">100</span></div>
+      </div>
+      <div class="badge" id="opp-badge">残 5枚</div>
+    </div>
+
+    <div class="field" id="field">
+      <div class="fhead">
+        <div class="rd">第 <b id="f-round">1</b> 回戦<span style="color:var(--dim);font-size:11px;margin-left:8px">参加料 <span id="f-ante">1</span></span></div>
+        <div class="pot">POT <b id="f-pot">0</b></div>
+      </div>
+      <div class="targets">
+        <div class="tgt opp"><span class="cap" id="t-opp-cap">OPPONENT</span><span class="num q" id="t-opp">??</span></div>
+        <div class="vs">対</div>
+        <div class="tgt mine"><span class="cap">YOU</span><span class="num q" id="t-me">??</span></div>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+
+      <!-- 目隠し -->
+      <div class="panel" id="panel-pass">
+        <div class="big" id="pass-msg">端末を渡してください</div>
+        <div class="sm" id="pass-sub">相手に画面を見られないように。</div>
+        <button class="btn pri" id="pass-ok" style="min-width:200px">確認した</button>
+      </div>
+
+      <!-- プレート選択 -->
+      <div class="panel" id="panel-plate">
+        <div class="clock" id="plate-clock">
+          <span class="lab">SELECT</span>
+          <div class="bar"><i id="plate-bar"></i></div>
+          <span class="t" id="plate-t">30.0</span>
+        </div>
+        <h3 class="ptitle" id="plate-title">数字を1枚選べ<span>場にオープンされる</span></h3>
+        <div class="plates" id="plate-list"></div>
+        <p class="note" id="plate-note"></p>
+      </div>
+
+      <!-- ベット -->
+      <div class="panel" id="panel-bet">
+        <div class="money">
+          <div><span class="k" id="bet-n1">YOU</span><span class="c" id="bet-c1">0</span></div>
+          <div class="mid">賭け</div>
+          <div><span class="k" id="bet-n2">OPP</span><span class="c" id="bet-c2">0</span></div>
+        </div>
+        <div class="clock" id="bet-clock">
+          <span class="lab" id="bet-clock-lab">BET TIME</span>
+          <div class="bar"><i id="bet-clock-bar"></i></div>
+          <span class="t" id="bet-clock-t">30.0</span>
+        </div>
+        <h3 class="ptitle" id="bet-turn">あなたの手番</h3>
+        <div class="raisebox" id="raisebox">
+          <div class="rv"><span>レイズ額（上限 <span id="rz-max">0</span>）</span><b id="rz-val">1</b></div>
+          <input type="range" id="rz-range" min="1" max="1" value="1">
+          <div class="quick">
+            <button class="btn gho" data-rz="0.25">1/4</button>
+            <button class="btn gho" data-rz="0.5">1/2</button>
+            <button class="btn gho" data-rz="1">MAX</button>
+            <button class="btn pri" id="rz-go" style="flex:1.4">決定</button>
+          </div>
+        </div>
+        <div class="betgrid" id="bet-actions">
+          <button class="btn dgr" id="b-fold">フォールド</button>
+          <button class="btn pri" id="b-call">チェック</button>
+          <button class="btn wide" id="b-raise">レイズ</button>
+        </div>
+        <div class="log" id="bet-log"></div>
+      </div>
+
+      <!-- 役作り -->
+      <div class="panel" id="panel-build">
+        <div class="clock" id="build-clock">
+          <span class="lab">BUILD</span>
+          <div class="bar"><i id="build-bar"></i></div>
+          <span class="t" id="build-t">100.0</span>
+        </div>
+        <div class="sum" id="sum-box">
+          <div><span class="k">目標</span><span class="v" id="bd-target">0</span></div>
+          <div><span class="k">現在</span><span class="v" id="bd-sum">0</span></div>
+          <div><span class="k">差</span><span class="v" id="bd-diff">0</span></div>
+        </div>
+        <div class="blindnote" id="bd-blind" hidden>盤面は伏せられている。<b>合計も使用済みの札も表示されない</b> ── すべて頭の中で。</div>
+        <div class="note" id="bd-opp" style="text-align:center"></div>
+        <div class="slots" id="bd-slots"></div>
+        <div class="handname none" id="bd-name">5枚選ぶと役が表示されます</div>
+        <div class="deck" id="bd-deck"></div>
+        <div class="foot3">
+          <button class="btn gho" id="bd-clear">クリア</button>
+          <button class="btn gho" id="bd-hint">思考 −25%</button>
+          <button class="btn pri" id="bd-ok" disabled>決定</button>
+        </div>
+        <details class="info">
+          <summary>相手の情報 / 使用済みの札</summary>
+          <div class="body" id="bd-info"></div>
+        </details>
+      </div>
+
+      <!-- 結果 -->
+      <div class="panel" id="panel-reveal">
+        <div class="verdict" id="rv-verdict">─</div>
+        <div id="rv-tensai"></div>
+        <div class="sd" id="rv-a"></div>
+        <div class="sd" id="rv-b"></div>
+        <div class="pain" id="rv-pain"></div>
+        <div class="log" id="rv-log"></div>
+        <button class="btn pri" id="rv-next">次へ</button>
+      </div>
+
+    </div>
+
+    <div class="strip me" id="strip-me">
+      <div class="who" id="me-name">あなた<small>YOU</small></div>
+      <div class="gauges">
+        <div class="grow"><span class="lab">AIR</span><div class="bar air"><i id="me-air-bar"></i></div><span class="gval air" id="me-air">25</span></div>
+        <div class="grow"><span class="lab" id="me-o2-lab">O2</span><div class="bar o2"><i id="me-o2-bar"></i></div><span class="gval o2" id="me-o2">100</span></div>
+      </div>
+      <div class="badge" id="me-badge">残 5枚</div>
+    </div>
+  </section>
+
+  <!-- ══════════ 決着 ══════════ -->
+  <section id="s-over" class="screen">
+    <div class="res" id="ov-res">─</div>
+    <p class="cause" id="ov-cause"></p>
+    <div class="stats" id="ov-stats"></div>
+    <div class="overbtns">
+      <button class="btn pri" id="ov-again">同じ条件でもう一度</button>
+      <button class="btn" id="ov-title">タイトルへ</button>
+    </div>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script id="core">
+/* ==========================================================================
+   エア・ポーカー ─ ルールエンジン（DOM非依存 / 単体検証可能）
+   ========================================================================== */
+(function(GLOBAL){
+'use strict';
+
+/* ---------- 札 ---------- */
+var SUIT_CH=['♠','♥','♦','♣'];               /* ♠♥♦♣ */
+var RANK_CH=['','A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+var CAT_NAME=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート',
+              'フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
+function cid(r,s){return (r-1)*4+s;}
+function cRank(id){return ((id/4)|0)+1;}
+function cSuit(id){return id&3;}
+function isRed(id){var s=id&3;return s===1||s===2;}
+function cardStr(id){return SUIT_CH[cSuit(id)]+RANK_CH[cRank(id)];}
+
+/* ---------- 定数 ---------- */
+var START_AIR=25, MAX_ROUNDS=5, PLATE_TIME=30, BET_TIME=30, FORCE_TIME=15, BUILD_TIME=100;
+var THINK_MULT=2;                 /* 自分の選択が済むまでは酸素の減りが倍になる */
+var O2_PER_CHIP=100;              /* エア1枚＝100秒ぶんの酸素 */
+var DRAIN=100/O2_PER_CHIP;        /* %/秒 */
+var MAX_ATTEMPT=3;                /* 双方ミス時の再挑戦上限 */
+var PLATE_LO=6, PLATE_HI=64;      /* 5枚で作れる合計数の全域 */
+var SF_SUMS=[15,20,25,30,35,40,45,50,55,47];   /* ストレートフラッシュを組める合計 */
+
+var DIFF={
+  easy:  {label:'下っ端', handW:[0.30,0.28,0.22,0.20], model:[0.30,0.25,0.20,0.15,0.10],
+          aggr:0.65, noise:0.26, plateT:9.0, reserve:2, bluff:0.16, tensai:false,
+          think:[52,92], betThink:[4,11], slip:0.13},
+  normal:{label:'立会人', handW:[0.72,0.20,0.08],       model:[0.45,0.25,0.15,0.10,0.05],
+          aggr:1.00, noise:0.12, plateT:2.6, reserve:3, bluff:0.10, tensai:false,
+          think:[34,72], betThink:[3,9], slip:0.05},
+  hard:  {label:'梟',     handW:[1],                     model:[0.55,0.24,0.12,0.06,0.03],
+          aggr:1.25, noise:0.04, plateT:1.1, reserve:2, bluff:0.07, tensai:true,
+          think:[21,48], betThink:[3,8], slip:0.015}
+};
+
+
+function mulberry32(a){
+  return function(){
+    a|=0; a=a+0x6D2B79F5|0;
+    var t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+/* ---------- 役の評価（唯一の正解判定） ---------- */
+function evalCards(ids){
+  var st=[],su=[],i;
+  for(i=0;i<5;i++){var r=cRank(ids[i]); st.push(r===1?14:r); su.push(cSuit(ids[i]));}
+  st.sort(function(a,b){return b-a;});
+  var cm={},k;
+  for(i=0;i<5;i++){cm[st[i]]=(cm[st[i]]||0)+1;}
+  var groups=[];
+  for(k in cm) groups.push({v:+k,c:cm[k]});
+  groups.sort(function(a,b){return b.c-a.c||b.v-a.v;});
+  var flush=(su[0]===su[1]&&su[1]===su[2]&&su[2]===su[3]&&su[3]===su[4]);
+  var straight=false, high=0;
+  if(groups.length===5){
+    if(st[0]-st[4]===4){straight=true;high=st[0];}
+    else if(st[0]===14&&st[1]===5&&st[2]===4&&st[3]===3&&st[4]===2){straight=true;high=5;}
+  }
+  var key;
+  if(straight&&flush)                       key=[8,high];
+  else if(groups[0].c===4)                  key=[7,groups[0].v,groups[1].v];
+  else if(groups[0].c===3&&groups[1].c===2) key=[6,groups[0].v,groups[1].v];
+  else if(flush)                            key=[5,st[0],st[1],st[2],st[3],st[4]];
+  else if(straight)                         key=[4,high];
+  else if(groups[0].c===3)                  key=[3,groups[0].v,groups[1].v,groups[2].v];
+  else if(groups[0].c===2&&groups[1].c===2) key=[2,groups[0].v,groups[1].v,groups[2].v];
+  else if(groups[0].c===2)                  key=[1,groups[0].v,groups[1].v,groups[2].v,groups[3].v];
+  else                                      key=[0,st[0],st[1],st[2],st[3],st[4]];
+  return {key:key,cat:key[0],name:handName(key)};
+}
+function handName(key){
+  if(key[0]===8) return key[1]===14?'ロイヤルストレートフラッシュ':'ストレートフラッシュ';
+  return CAT_NAME[key[0]];
+}
+function cmpKey(a,b){
+  var n=Math.max(a.length,b.length);
+  for(var i=0;i<n;i++){var x=a[i]||0,y=b[i]||0; if(x!==y) return x<y?-1:1;}
+  return 0;
+}
+
+/* ---------- 手札プールの全探索 ----------
+   使える札から作れる「5枚のランク組」を全列挙し、合計数ごとに強い順で保持する。
+   スート割り当ては後段（materialize）で決めるため、フラッシュ可能スートだけ控える。 */
+var poolCache={}, poolCacheN=0;
+
+function analyzePool(avail){
+  var sig=Array.prototype.join.call(avail,'');
+  if(poolCache[sig]) return poolCache[sig];
+
+  var suitsByRank=[null],r,s;
+  for(r=1;r<=13;r++){
+    var a=[];
+    for(s=0;s<4;s++) if(avail[cid(r,s)]) a.push(s);
+    suitsByRank[r]=a;
+  }
+  var bySum={}, counts=new Int8Array(14);
+
+  function addCand(sum){
+    var ranks=[],rr,k;
+    for(rr=1;rr<=13;rr++) for(k=0;k<counts[rr];k++) ranks.push(rr);
+    var distinct=(ranks[0]!==ranks[1]&&ranks[1]!==ranks[2]&&ranks[2]!==ranks[3]&&ranks[3]!==ranks[4]);
+    var flushSuits=[];
+    if(distinct){
+      for(var fs=0;fs<4;fs++){
+        var ok=true;
+        for(var i=0;i<5;i++) if(!avail[cid(ranks[i],fs)]){ok=false;break;}
+        if(ok) flushSuits.push(fs);
+      }
+    }
+    var cards=materialize(ranks,suitsByRank,flushSuits.length?flushSuits[0]:-1);
+    var ev=evalCards(cards);
+    (bySum[sum]||(bySum[sum]=[])).push({
+      ranks:ranks, flushSuits:flushSuits, key:ev.key, cat:ev.cat, name:ev.name, cards:cards
+    });
+  }
+  function rec(rk,left,sum){
+    if(left===0){addCand(sum);return;}
+    if(rk>13) return;
+    var maxc=Math.min(4,suitsByRank[rk].length,left);
+    for(var c=0;c<=maxc;c++){
+      counts[rk]=c;
+      rec(rk+1,left-c,sum+rk*c);
+    }
+    counts[rk]=0;
+  }
+  rec(1,5,0);
+
+  for(var key in bySum){
+    var arr=bySum[key];
+    arr.sort(function(a,b){return cmpKey(b.key,a.key);});
+    var out=[],seen={};
+    for(var i=0;i<arr.length;i++){
+      var ks=arr[i].key.join(',');
+      if(seen[ks]) continue;
+      seen[ks]=1; out.push(arr[i]);
+      if(out.length>=12) break;
+    }
+    bySum[key]=out;
+  }
+  var res={bySum:bySum,suitsByRank:suitsByRank};
+  if(poolCacheN>48){poolCache={};poolCacheN=0;}
+  poolCache[sig]=res; poolCacheN++;
+  return res;
+}
+
+/* ランク組を実際の52枚の札に落とす。flushSuit>=0 ならそのスートで揃える。 */
+function materialize(ranks,suitsByRank,flushSuit){
+  var out=[],i;
+  if(flushSuit>=0){
+    for(i=0;i<5;i++) out.push(cid(ranks[i],flushSuit));
+    return out;
+  }
+  var used={};
+  for(i=0;i<5;i++){
+    var r=ranks[i], k=used[r]||0; used[r]=k+1;
+    out.push(cid(r,suitsByRank[r][k]));
+  }
+  return out;
+}
+/* 相手が引きそうな札(w)に寄せてスートを選ぶ。役の強さは変わらない。 */
+function materializeWeighted(ranks,suitsByRank,flushSuits,w,rnd){
+  var i,r,s,out=[];
+  if(flushSuits.length){
+    var bestS=flushSuits[0],bs=-Infinity;
+    for(i=0;i<flushSuits.length;i++){
+      s=flushSuits[i]; var sc=rnd()*1e-3;
+      for(var j=0;j<5;j++) sc+=(w[cid(ranks[j],s)]||0);
+      if(sc>bs){bs=sc;bestS=s;}
+    }
+    for(i=0;i<5;i++) out.push(cid(ranks[i],bestS));
+    return out;
+  }
+  var taken={};
+  for(i=0;i<5;i++){
+    r=ranks[i];
+    var t=taken[r]||(taken[r]=[]), pick=-1, best=-Infinity, opts=suitsByRank[r];
+    for(var q=0;q<opts.length;q++){
+      s=opts[q];
+      if(t.indexOf(s)>=0) continue;
+      var v=(w[cid(r,s)]||0)+rnd()*1e-3;
+      if(v>best){best=v;pick=s;}
+    }
+    if(pick<0) pick=opts[t.length];      /* 起こり得ないが保険 */
+    t.push(pick); out.push(cid(r,pick));
+  }
+  return out;
+}
+
+/* ---------- CPU ---------- */
+/* 相手候補手から「この札を使いそう」という重みを作る */
+function oppCardWeights(ocands,osuits,model){
+  var w={},i,j;
+  for(i=0;i<ocands.length&&i<model.length;i++){
+    var c=ocands[i], wt=model[i];
+    if(c.flushSuits.length){
+      var share=wt/c.flushSuits.length;
+      for(j=0;j<c.flushSuits.length;j++){
+        var s=c.flushSuits[j];
+        for(var k=0;k<5;k++){var id=cid(c.ranks[k],s); w[id]=(w[id]||0)+share;}
+      }
+    }else{
+      var cnt={};
+      for(j=0;j<5;j++) cnt[c.ranks[j]]=(cnt[c.ranks[j]]||0)+1;
+      for(var rk in cnt){
+        var r=+rk, opts=osuits[r]||[];
+        if(!opts.length) continue;
+        var sh=wt*cnt[rk]/opts.length;
+        for(j=0;j<opts.length;j++){var id2=cid(r,opts[j]); w[id2]=(w[id2]||0)+sh;}
+      }
+    }
+  }
+  return w;
+}
+
+function cpuPlanHand(g,pi){
+  var me=g.P[pi], opp=g.P[1-pi], D=DIFF[g.diff];
+  var an=analyzePool(me.avail), cands=an.bySum[me.target];
+  if(!cands||!cands.length) return null;
+  var oan=analyzePool(opp.avail), ocands=oan.bySum[opp.target]||[];
+  var w=oppCardWeights(ocands,oan.suitsByRank,D.model);
+
+  /* 上級：最善手が相手の理論上の最善手に確実に勝つなら、
+     勝ちを保った上で「重複しやすい」札を選び天災を狙う */
+  if(D.tensai&&ocands.length){
+    var oBest=ocands[0].key, safe=[];
+    for(var i=0;i<cands.length;i++) if(cmpKey(cands[i].key,oBest)>0) safe.push(cands[i]);
+    if(safe.length){
+      var bestCards=null,bs=-1;
+      for(i=0;i<safe.length;i++){
+        var cd=materializeWeighted(safe[i].ranks,an.suitsByRank,safe[i].flushSuits,w,g.rnd);
+        var sc=0;
+        for(var j=0;j<5;j++) sc+=(w[cd[j]]||0);
+        if(sc>bs){bs=sc;bestCards=cd;}
+      }
+      if(bestCards) return bestCards;
+    }
+  }
+  var W=D.handW, idx=W.length-1, r=g.rnd(), acc=0;
+  for(var t=0;t<W.length;t++){acc+=W[t]; if(r<acc){idx=t;break;}}
+  if(idx>=cands.length) idx=cands.length-1;
+  var pick=cands[idx];
+  return materializeWeighted(pick.ranks,an.suitsByRank,pick.flushSuits,w,g.rnd);
+}
+
+function cpuWinProb(g,pi){
+  var me=g.P[pi], opp=g.P[1-pi], D=DIFF[g.diff];
+  if(!me.plan) return 0.03;
+  var myKey=evalCards(me.plan).key;
+  var oc=analyzePool(opp.avail).bySum[opp.target]||[];
+  if(!oc.length) return 0.97;
+  var tot=0,acc=0;
+  for(var i=0;i<oc.length&&i<D.model.length;i++){
+    var wt=D.model[i]; tot+=wt;
+    var c=cmpKey(myKey,oc[i].key);
+    acc+=wt*(c>0?1:(c<0?0:0.5));
+  }
+  return tot>0?acc/tot:0.5;
+}
+
+function cpuBet(g,pi){
+  var me=g.P[pi], D=DIFF[g.diff];
+  var d=Math.max(0,g.deficit(pi)), pot=g.pot();
+  var pWin=cpuWinProb(g,pi);
+  pWin+=(g.rnd()-0.5)*2*D.noise;
+  if(pWin<0.02)pWin=0.02; if(pWin>0.98)pWin=0.98;
+
+  var mx=g.maxRaise(pi), canRaise=g.raiseOpen&&mx>0;
+  var reserve=Math.min(me.chips,D.reserve+(MAX_ROUNDS-g.round));
+
+  if(d>0){
+    var odds=d/(pot+d);
+    if(pWin<odds*0.88 && d>Math.max(1,Math.floor(me.chips*0.05))) return {action:'fold'};
+  }
+  var want=(pWin>0.66);
+  if(!want&&canRaise&&d===0&&pWin<0.35&&g.rnd()<D.bluff) want=true;   /* ブラフ */
+  if(want&&canRaise){
+    var frac=Math.min(1,Math.max(0.18,(pWin-0.55)/0.40))*D.aggr*(0.7+0.6*g.rnd());
+    if(frac>1)frac=1;
+    var amt=Math.max(1,Math.round(mx*frac));
+    if(pWin<0.90){var room=me.chips-d-reserve; if(room<amt) amt=room;}
+    if(amt>mx) amt=mx;
+    if(amt>=1) return {action:'raise',amount:amt};
+  }
+  if(d===0) return {action:'check'};
+  if(d>=me.chips) return pWin>0.55?{action:'call'}:{action:'fold'};
+  return {action:'call'};
+}
+
+function cpuPlate(g,pi){
+  var me=g.P[pi], opp=g.P[1-pi], D=DIFF[g.diff], i;
+  var rem=[];
+  for(i=0;i<5;i++) if(!me.plateUsed[i]) rem.push(i);
+  if(rem.length<=1) return rem[0];
+
+  var an=analyzePool(me.avail), oan=analyzePool(opp.avail);
+  var pool=[];
+  for(var n=PLATE_LO;n<=PLATE_HI;n++) if(g.playedNums.indexOf(n)<0) pool.push(n);
+
+  var score=[];
+  for(i=0;i<rem.length;i++){
+    var cands=an.bySum[me.plates[rem[i]]];
+    if(!cands||!cands.length){score.push({i:rem[i],s:-1});continue;}
+    var k=cands[0].key, w=0;
+    for(var q=0;q<pool.length;q++){
+      var oc=oan.bySum[pool[q]];
+      if(!oc||!oc.length){w+=1;continue;}
+      var c=cmpKey(k,oc[0].key);
+      w+= c>0?1:(c<0?0:0.5);
+    }
+    score.push({i:rem[i], s:pool.length?w/pool.length:0});
+  }
+  score.sort(function(a,b){return a.s-b.s;});            /* 弱い順 */
+  var N=score.length;
+  var target=(g.round-1)/(MAX_ROUNDS-1)*(N-1);           /* 序盤は温存、終盤に本命 */
+  var ws=[],sum=0;
+  for(i=0;i<N;i++){var v=Math.exp(-Math.abs(i-target)/D.plateT); ws.push(v); sum+=v;}
+  var r=g.rnd()*sum, idx=N-1;
+  for(i=0;i<N;i++){r-=ws[i]; if(r<=0){idx=i;break;}}
+  return score[idx].i;
+}
+
+/* ---------- ゲーム本体 ---------- */
+function Game(opt){
+  opt=opt||{};
+  this.mode=opt.mode||'cpu';
+  this.diff=opt.difficulty||'normal';
+  this.blind=!!opt.blind;          /* 暗算モード（原作準拠） */
+  var seed=(opt.seed===undefined)?((Math.random()*4294967296)>>>0):opt.seed;
+  this.seed=seed;
+  this.rnd=mulberry32(seed);
+  this.paused=false;
+
+  var names = this.mode==='pvp' ? ['プレイヤー1','プレイヤー2']
+                                : ['あなた', DIFF[this.diff].label];
+  var plates=this.dealPlates();
+  this.P=[];
+  for(var i=0;i<2;i++){
+    this.P.push({
+      idx:i, name:names[i], isCPU:(this.mode==='cpu'&&i===1),
+      chips:START_AIR, o2:100, burned:0, wins:0, thought:0, lastBuild:0,
+      plates:plates[i], plateUsed:[false,false,false,false,false],
+      avail:new Uint8Array(52).fill(1),
+      committed:0, folded:false, allIn:false,
+      target:0, hasSol:false, plan:null, hand:null, missed:false, missReason:'',
+      dead:false, drowning:false
+    });
+  }
+  this.round=0; this.carry=0; this.vanished=0; this.phase='init';
+  this.playedNums=[]; this.log=[]; this.events=[];
+  this.result=null; this.winner=null; this.overReason='';
+  this.cpuFallback=0;      /* CPU が不正手を返した回数（0 であるべき） */
+  this.startRound();
+}
+
+Game.prototype.shuffle=function(a){
+  for(var i=a.length-1;i>0;i--){
+    var j=(this.rnd()*(i+1))|0, t=a[i]; a[i]=a[j]; a[j]=t;
+  }
+  return a;
+};
+/* 数字板を配る。6〜64 の全域から重複なく10個を引き、交互に配る。
+   極端な数字（6 や 64 など）は組める役がごく限られ、札が減れば組めなくなる。
+   いつ切るかが勝負どころになる。 */
+Game.prototype.dealPlates=function(){
+  var pool=[],n;
+  for(n=PLATE_LO;n<=PLATE_HI;n++) pool.push(n);
+  this.shuffle(pool);
+  var a=[],b=[];
+  for(var i=0;i<10;i++) (i%2?b:a).push(pool[i]);
+  return [this.shuffle(a),this.shuffle(b)];
+};
+
+Game.prototype.pot=function(){return this.P[0].committed+this.P[1].committed+this.carry;};
+Game.prototype.deficit=function(pi){return this.P[1-pi].committed-this.P[pi].committed;};
+Game.prototype.maxRaise=function(pi){
+  var p=this.P[pi], d=Math.max(0,this.deficit(pi));
+  var cap=Math.floor((this.pot()+d)/2);
+  var room=p.chips-d;
+  return Math.max(0,Math.min(cap,room));
+};
+Game.prototype.pushLog=function(who,txt){
+  this.log.push({who:who,txt:txt});
+  if(this.log.length>120) this.log.shift();
+};
+
+/* 酸素を amount ぶん減らす。尽きたらエアを1枚使って呼吸する。 */
+Game.prototype.spendO2=function(pi,amount){
+  var p=this.P[pi], guard=0;
+  p.o2-=amount;
+  while(p.o2<=0&&guard++<400){
+    if(p.chips>0){
+      p.chips--; p.burned++; p.o2+=100;
+      if(p.chips===0) p.allIn=true;
+      this.events.push({t:'breath',p:pi});
+      this.pushLog(p.name,'エアを1枚消費して呼吸');
+    }else{ p.o2=0; p.drowning=true; break; }
+  }
+};
+/* CPU の思考時間を酸素に計上する（待ち時間は短いまま、消費だけ人間と同じ重みで） */
+Game.prototype.chargeThink=function(pi,seconds){
+  this.P[pi].thought+=seconds;
+  this.spendO2(pi,DRAIN*seconds);
+};
+
+Game.prototype.startRound=function(){
+  this.round++;
+  var ante=this.round, i;
+  this.log=[];
+  for(i=0;i<2;i++){
+    var p=this.P[i];
+    p.committed=0; p.folded=false; p.allIn=false;
+    p.target=0; p.hasSol=false; p.plan=null; p.hand=null; p.missed=false;
+    p.missReason=''; p.drowning=false;
+    var pay=Math.min(p.chips,ante);
+    p.chips-=pay; p.committed=pay;
+    if(p.chips===0) p.allIn=true;
+  }
+  this.ante=ante; this.attempt=1; this.result=null;
+  this.plateSel=[null,null];
+  this.plateClock=[PLATE_TIME,PLATE_TIME];
+  this.submitted=[false,false];
+  this.buildClock=[BUILD_TIME,BUILD_TIME];
+  this.buildTurn=0;
+  this.betLeft=BET_TIME; this.forceLeft=FORCE_TIME; this.raiseOpen=true;
+  this.pushLog('sys','第'+this.round+'回戦 ─ 参加料 '+ante+' エア');
+  this.phase='plate';
+};
+
+Game.prototype.selectPlate=function(pi,idx){
+  if(this.phase!=='plate') return false;
+  var p=this.P[pi];
+  if(!(idx>=0&&idx<5) || p.plateUsed[idx] || this.plateSel[pi]!==null) return false;
+  this.plateSel[pi]=idx;
+  if(this.plateSel[0]!==null&&this.plateSel[1]!==null) this.revealPlates();
+  return true;
+};
+
+Game.prototype.revealPlates=function(){
+  for(var i=0;i<2;i++){
+    var p=this.P[i], idx=this.plateSel[i];
+    p.plateUsed[idx]=true;
+    p.target=p.plates[idx];
+    this.playedNums.push(p.target);
+    p.hasSol=!!analyzePool(p.avail).bySum[p.target];
+  }
+  this.pushLog('sys','数字がオープンされた ─ '+this.P[0].name+' '+this.P[0].target+
+                     ' / '+this.P[1].name+' '+this.P[1].target);
+  for(i=0;i<2;i++) if(this.P[i].isCPU) this.P[i].plan=cpuPlanHand(this,i);
+  this.beginBetting();
+};
+
+Game.prototype.beginBetting=function(){
+  this.phase='bet';
+  this.betLeft=BET_TIME; this.forceLeft=FORCE_TIME; this.raiseOpen=true;
+  this.need=[!this.P[0].allIn, !this.P[1].allIn];
+  this.toAct=(this.round%2===1)?0:1;
+  if(this.P[this.toAct].allIn) this.toAct=1-this.toAct;
+  if(!this.need[0]&&!this.need[1]) this.endBetting();
+};
+
+Game.prototype.act=function(pi,action,amount){
+  if(this.phase!=='bet'||pi!==this.toAct) return false;
+  var p=this.P[pi], other=1-pi, po=this.P[other];
+  var d=Math.max(0,this.deficit(pi));
+
+  if(action==='fold'){
+    p.folded=true;
+    this.pushLog(p.name,'フォールド');
+    this.finishRound({fold:pi});
+    return true;
+  }
+  if(action==='check'){
+    if(d>0) return false;
+    this.need[pi]=false;
+    this.pushLog(p.name,'チェック');
+  }else if(action==='call'){
+    var pay=Math.min(d,p.chips);
+    p.chips-=pay; p.committed+=pay;
+    if(p.chips===0) p.allIn=true;
+    this.need[pi]=false;
+    this.pushLog(p.name, d>0 ? ('コール '+pay+(p.allIn?'（オールイン）':'')) : 'チェック');
+  }else if(action==='raise'){
+    if(!this.raiseOpen) return false;
+    var mx=this.maxRaise(pi);
+    var amt=Math.floor(amount||0);
+    if(!(amt>=1)) return false;
+    if(amt>mx) amt=mx;
+    if(amt<1) return false;
+    var total=d+amt;
+    if(total>p.chips) return false;
+    p.chips-=total; p.committed+=total;
+    if(p.chips===0) p.allIn=true;
+    this.need[pi]=false;
+    this.need[other]=!po.allIn;
+    this.pushLog(p.name,(d>0?'レイズ ':'ベット ')+amt+(p.allIn?'（オールイン）':''));
+  }else return false;
+
+  if(this.need[other]&&!po.allIn){ this.toAct=other; this.forceLeft=FORCE_TIME; }
+  else this.endBetting();
+  return true;
+};
+
+Game.prototype.endBetting=function(){
+  /* 片方がオールインで賭け額が揃わない場合、超過分を返す */
+  var d=this.P[0].committed-this.P[1].committed;
+  if(d>0){ this.P[0].committed-=d; this.P[0].chips+=d; if(this.P[0].chips>0)this.P[0].allIn=false;
+           this.pushLog('sys','超過分 '+d+' を返却'); }
+  else if(d<0){ this.P[1].committed+=d; this.P[1].chips-=d; if(this.P[1].chips>0)this.P[1].allIn=false;
+           this.pushLog('sys','超過分 '+(-d)+' を返却'); }
+  this.beginBuild();
+};
+
+Game.prototype.beginBuild=function(){
+  this.phase='build';
+  this.buildClock=[BUILD_TIME,BUILD_TIME];
+  this.submitted=[false,false];
+  this.buildTurn=0;
+  for(var i=0;i<2;i++){
+    var p=this.P[i];
+    p.hand=null; p.missed=false; p.missReason='';
+    if(!p.hasSol&&!this.blind){
+      this.submitted[i]=true; p.missed=true; p.missReason='組める役が無い';
+      this.pushLog(p.name,'この数字では役が組めない');
+    }
+  }
+  this.advanceBuildTurn();
+  this.checkBuildDone();
+};
+Game.prototype.advanceBuildTurn=function(){
+  if(this.mode!=='pvp') return;
+  if(this.submitted[this.buildTurn]){
+    var o=1-this.buildTurn;
+    if(!this.submitted[o]) this.buildTurn=o;
+  }
+};
+/* 5枚そろっていて重複が無いか（暗算モードではここまでしか見ない） */
+Game.prototype.wellFormed=function(cards){
+  if(!cards||cards.length!==5) return false;
+  var seen={};
+  for(var i=0;i<5;i++){
+    var id=cards[i];
+    if(!(id>=0&&id<52)) return false;
+    if(seen[id]) return false;
+    seen[id]=1;
+  }
+  return true;
+};
+/* 規則どおり正しい5枚か。誤りの内容を返す（'' なら正しい） */
+Game.prototype.handFault=function(pi,cards){
+  if(!this.wellFormed(cards)) return '5枚そろっていない';
+  var p=this.P[pi], s=0, reused=false;
+  for(var i=0;i<5;i++){
+    if(!p.avail[cards[i]]) reused=true;
+    s+=cRank(cards[i]);
+  }
+  if(reused) return '使用済みの札を使った';
+  if(s!==p.target) return '合計数が違う（'+s+'）';
+  return '';
+};
+Game.prototype.validHand=function(pi,cards){ return this.handFault(pi,cards)===''; };
+
+Game.prototype.submitHand=function(pi,cards){
+  if(this.phase!=='build'||this.submitted[pi]) return false;
+  if(!this.wellFormed(cards)) return false;
+  var fault=this.handFault(pi,cards);
+  /* 通常モードは誤った提示を受け付けない（画面側でも決定できない）。
+     暗算モードは提示できてしまい、その場でミスになる。 */
+  if(fault&&!this.blind) return false;
+
+  var p=this.P[pi];
+  p.lastBuild=BUILD_TIME-Math.max(0,this.buildClock[pi]);
+  this.submitted[pi]=true;
+  if(fault){
+    p.hand=null; p.missed=true; p.missReason=fault;
+    this.pushLog(p.name,'ミス ─ '+fault);
+  }else{
+    p.hand=cards.slice(); p.missed=false; p.missReason='';
+    this.pushLog(p.name,'役を提示');
+  }
+  this.advanceBuildTurn();
+  this.checkBuildDone();
+  return true;
+};
+Game.prototype.missHand=function(pi,reason){
+  if(this.phase!=='build'||this.submitted[pi]) return false;
+  var p=this.P[pi];
+  p.lastBuild=BUILD_TIME-Math.max(0,this.buildClock[pi]);
+  p.hand=null; p.missed=true; p.missReason=reason||'時間切れ';
+  this.submitted[pi]=true;
+  this.pushLog(p.name,'ミス ─ '+p.missReason);
+  this.advanceBuildTurn();
+  this.checkBuildDone();
+  return true;
+};
+Game.prototype.checkBuildDone=function(){
+  if(this.submitted[0]&&this.submitted[1]) this.finishRound({});
+};
+
+Game.prototype.finishRound=function(info){
+  var A=this.P[0], B=this.P[1];
+  var potTotal=this.pot();
+  var winner=null, tensai=false, dup=[];
+
+  if(info.fold!==undefined){
+    winner=1-info.fold;
+  }else{
+    var m0=(A.missed||!A.hand), m1=(B.missed||!B.hand);
+    if(m0&&m1){
+      if((!A.hasSol&&!B.hasSol) || this.attempt>=MAX_ATTEMPT){
+        this.carry=potTotal; A.committed=0; B.committed=0;
+        this.result={type:'carry',pot:potTotal};
+        this.pushLog('sys','双方ミス ─ 場の '+potTotal+' エアは次回戦へ持ち越し');
+        this.phase='reveal';
+        return;
+      }
+      this.attempt++;
+      this.pushLog('sys','双方ミス ─ 再度100秒が与えられる（'+this.attempt+'回目）');
+      this.buildClock=[BUILD_TIME,BUILD_TIME];
+      this.submitted=[false,false];
+      this.buildTurn=0;
+      for(var i=0;i<2;i++){
+        var p=this.P[i]; p.hand=null; p.missed=false; p.missReason='';
+        if(!p.hasSol&&!this.blind){ this.submitted[i]=true; p.missed=true;
+                                    p.missReason='組める役が無い'; }
+      }
+      this.advanceBuildTurn();
+      this.phase='build';
+      return;
+    }
+    if(m0) winner=1;
+    else if(m1) winner=0;
+    else{
+      var c=cmpKey(evalCards(A.hand).key, evalCards(B.hand).key);
+      winner=(c>0?0:(c<0?1:null));
+      for(var j=0;j<5;j++) if(B.hand.indexOf(A.hand[j])>=0) dup.push(A.hand[j]);
+      tensai=dup.length>0;
+    }
+  }
+
+  var cA=A.committed, cB=B.committed, extra=0;
+  if(winner===null){
+    A.chips+=cA; B.chips+=cB; A.committed=0; B.committed=0;
+    this.result={type:'draw',dup:dup,tensai:tensai};
+    this.pushLog('sys','引き分け ─ 賭けたエアは戻る');
+  }else{
+    var W=this.P[winner], L=this.P[1-winner];
+    var loserPaid=(winner===0?cB:cA);
+    W.chips+=potTotal;
+    A.committed=0; B.committed=0; this.carry=0;
+    if(tensai){
+      /* 天災で失うエアは水中へ消える。勝者の手に渡ることはない。 */
+      extra=Math.min(L.chips,loserPaid);
+      L.chips-=extra; this.vanished+=extra;
+    }
+    W.wins++;
+    this.result={type:'win',winner:winner,pot:potTotal,tensai:tensai,dup:dup,
+                 extra:extra,fold:(info.fold!==undefined),loserPaid:loserPaid};
+    this.pushLog('sys',W.name+' が '+potTotal+' エアを獲得'+
+                 (tensai?('／天災で '+extra+' エアが水中へ消えた'):''));
+  }
+  for(var q=0;q<2;q++){
+    var pp=this.P[q];
+    if(pp.hand) for(var z=0;z<5;z++) pp.avail[pp.hand[z]]=0;
+  }
+  this.phase='reveal';
+};
+
+Game.prototype.nextRound=function(){
+  if(this.phase!=='reveal') return false;
+  var A=this.P[0], B=this.P[1];
+  A.dead=(A.chips<=0); B.dead=(B.chips<=0);
+  if(A.dead||B.dead){
+    this.winner=(A.dead&&B.dead)?null:(A.dead?1:0);
+    this.overReason='drown';
+    this.phase='over';
+    return true;
+  }
+  if(this.round>=MAX_ROUNDS){
+    this.winner=(A.chips>B.chips)?0:((B.chips>A.chips)?1:null);
+    this.overReason='rounds';
+    this.phase='over';
+    return true;
+  }
+  this.startRound();
+  return true;
+};
+
+/* 対人戦では、目隠しの向こうにいる側は盤面を見ていない＝消費しない。 */
+Game.prototype.plateTurn=function(){ return this.plateSel[0]===null?0:1; };
+Game.prototype.onStage=function(i){
+  if(this.phase==='plate') return this.mode!=='pvp'||this.plateTurn()===i;
+  if(this.phase==='bet')   return true;                     /* ベットは公開の場 */
+  if(this.phase==='build') return this.mode!=='pvp'||this.buildTurn===i;
+  return false;
+};
+/* 自分の選択がまだ済んでいない＝考えている状態。ここだけ消費が倍になる。 */
+Game.prototype.isDeciding=function(i){
+  if(this.phase==='plate') return this.plateSel[i]===null;
+  if(this.phase==='bet')   return this.toAct===i;
+  if(this.phase==='build') return !this.submitted[i];
+  return false;
+};
+/* 自分の持ち時間が減っている状態か（CPU は実時間で待たせず、提示時に一括計上する） */
+Game.prototype.onClock=function(i){
+  return !this.P[i].isCPU && this.onStage(i) && this.isDeciding(i);
+};
+
+/* ---------- 時間の進行 ---------- */
+Game.prototype.tick=function(dt){
+  if(this.paused) return;
+  if(this.phase!=='plate'&&this.phase!=='bet'&&this.phase!=='build') return;
+  if(!(dt>0)) return;
+
+  /* 盤面に着いている間は常に酸素が減る。
+     さらに「自分の選択が済むまで」は倍の速さで減る。決めた者から楽になる。 */
+  for(var i=0;i<2;i++){
+    if(!this.onStage(i)) continue;
+    var deciding=(!this.P[i].isCPU&&this.isDeciding(i));
+    if(deciding) this.P[i].thought+=dt;
+    this.spendO2(i,DRAIN*dt*(deciding?THINK_MULT:1));
+  }
+
+  if(this.phase==='plate'){
+    for(i=0;i<2;i++){
+      if(this.plateSel[i]!==null) continue;
+      if(this.P[i].isCPU) continue;
+      if(this.mode==='pvp'&&this.plateTurn()!==i) continue;
+      this.plateClock[i]-=dt;
+      if(this.plateClock[i]<=0){
+        this.plateClock[i]=0;
+        var rem=[];
+        for(var k=0;k<5;k++) if(!this.P[i].plateUsed[k]) rem.push(k);
+        this.pushLog(this.P[i].name,'時間切れ ─ 数字が押し出された');
+        this.selectPlate(i,rem[(this.rnd()*rem.length)|0]);
+        if(this.phase!=='plate') return;
+      }
+    }
+    return;
+  }
+
+  if(this.phase==='bet'){
+    if(this.betLeft>0){
+      this.betLeft-=dt;
+      if(this.betLeft<=0){
+        this.betLeft=0; this.raiseOpen=false;
+        this.pushLog('sys','ベットタイム終了 ─ 以降レイズ不可');
+      }
+    }else{
+      this.forceLeft-=dt;
+      if(this.forceLeft<=0){
+        this.forceLeft=FORCE_TIME;
+        var pi=this.toAct, d=Math.max(0,this.deficit(pi));
+        this.pushLog('sys','時間切れ');
+        this.act(pi, d>0?'fold':'check');
+      }
+    }
+    return;
+  }
+
+  /* build */
+  for(i=0;i<2;i++){
+    if(this.submitted[i]) continue;
+    if(this.P[i].isCPU) continue;          /* CPU は提示時に一括計上する */
+    if(this.mode==='pvp'&&i!==this.buildTurn) continue;
+    this.buildClock[i]-=dt;
+    if(this.buildClock[i]<=0){
+      this.buildClock[i]=0;
+      this.missHand(i,'100秒を過ぎた');
+      if(this.phase!=='build') return;
+    }
+  }
+};
+
+/* ---------- CPU 手番 ---------- */
+Game.prototype.pendingCPU=function(){
+  var i;
+  if(this.phase==='plate'){
+    for(i=0;i<2;i++) if(this.P[i].isCPU&&this.plateSel[i]===null) return {pi:i,kind:'plate'};
+  }else if(this.phase==='bet'){
+    if(this.P[this.toAct].isCPU) return {pi:this.toAct,kind:'bet'};
+  }else if(this.phase==='build'){
+    for(i=0;i<2;i++) if(this.P[i].isCPU&&!this.submitted[i]) return {pi:i,kind:'build'};
+  }
+  return null;
+};
+/* CPU が費やす思考秒数。難易度が高いほど短く、その分だけ酸素も持つ。 */
+Game.prototype.cpuThink=function(kind){
+  var D=DIFF[this.diff];
+  if(kind==='plate') return 5+this.rnd()*12;
+  var r=(kind==='bet')?D.betThink:D.think;
+  return r[0]+this.rnd()*(r[1]-r[0]);
+};
+Game.prototype.runCPU=function(job){
+  if(!job) return;
+  var p=this.P[job.pi];
+  if(job.kind==='plate'){
+    var pt=Math.min(PLATE_TIME,this.cpuThink('plate'));
+    this.plateClock[job.pi]=Math.max(0,PLATE_TIME-pt);
+    this.chargeThink(job.pi,pt);
+    if(this.phase!=='plate'||this.plateSel[job.pi]!==null) return;
+    this.selectPlate(job.pi,cpuPlate(this,job.pi));
+  }else if(job.kind==='bet'){
+    this.chargeThink(job.pi,this.cpuThink('bet'));
+    if(this.phase!=='bet'||this.toAct!==job.pi) return;
+    var a=cpuBet(this,job.pi);
+    if(!this.act(job.pi,a.action,a.amount)){
+      /* 念のためのフォールバック（不正手を返した場合も必ず進行させる） */
+      this.cpuFallback++;
+      var d=Math.max(0,this.deficit(job.pi));
+      if(!this.act(job.pi, d>0?'call':'check')) this.act(job.pi,'fold');
+    }
+  }else if(job.kind==='build'){
+    var h=p.plan||cpuPlanHand(this,job.pi);
+    var secs=h?this.cpuThink('build'):BUILD_TIME;
+    /* 暗算モードでは CPU も記憶違いや計算ミスを起こす（難易度で頻度が変わる） */
+    var slip=this.blind&&h&&(this.rnd()<DIFF[this.diff].slip);
+    if(slip) h=null;
+    if(secs>BUILD_TIME) secs=BUILD_TIME;
+    this.buildClock[job.pi]=Math.max(0,BUILD_TIME-secs);
+    this.chargeThink(job.pi,secs);
+    if(this.phase!=='build'||this.submitted[job.pi]) return;
+    if(h&&this.validHand(job.pi,h)) this.submitHand(job.pi,h);
+    else this.missHand(job.pi, slip?(this.rnd()<0.5?'使用済みの札を使った':'合計数を間違えた')
+                                  :(h?'合計数を間違えた':'組める役が無い'));
+  }
+};
+
+GLOBAL.AP={
+  Game:Game, evalCards:evalCards, cmpKey:cmpKey, analyzePool:analyzePool,
+  materialize:materialize, cpuPlanHand:cpuPlanHand, cpuBet:cpuBet, cpuPlate:cpuPlate,
+  cid:cid, cRank:cRank, cSuit:cSuit, isRed:isRed, cardStr:cardStr, handName:handName,
+  SUIT_CH:SUIT_CH, RANK_CH:RANK_CH, CAT_NAME:CAT_NAME, SF_SUMS:SF_SUMS, DIFF:DIFF,
+  START_AIR:START_AIR, MAX_ROUNDS:MAX_ROUNDS, BET_TIME:BET_TIME, BUILD_TIME:BUILD_TIME,
+  FORCE_TIME:FORCE_TIME, PLATE_TIME:PLATE_TIME, THINK_MULT:THINK_MULT,
+  O2_PER_CHIP:O2_PER_CHIP, PLATE_LO:PLATE_LO, PLATE_HI:PLATE_HI,
+  mulberry32:mulberry32
+};
+})(typeof globalThis!=='undefined'?globalThis:this);
+</script>
+
+<script id="ui">
+/* ==========================================================================
+   エア・ポーカー ─ 画面と入力
+   ========================================================================== */
+(function(){
+'use strict';
+var A=window.AP;
+function el(id){return document.getElementById(id);}
+var G=null;
+var ui={blind:false,screen:'title',panel:null,viewer:0,lastPrivate:null,gateFor:null,
+        phaseKey:'',key:'',sel:[],buildFor:-1,buildAttempt:-1,hintUsed:false,
+        revealRound:-1,logLen:-1,logNode:null,cpuTimer:null,mode:'cpu',diff:'normal'};
+
+/* ---------- 画面切り替え ---------- */
+function screen(name){
+  ui.screen=name;
+  var ids=['title','rules','game','over'];
+  for(var i=0;i<ids.length;i++) el('s-'+ids[i]).classList.toggle('on',ids[i]===name);
+}
+function panel(name){
+  ui.panel=name;
+  var ids=['pass','plate','bet','build','reveal'];
+  var target=(name==='wait')?'pass':name;
+  for(var i=0;i<ids.length;i++) el('panel-'+ids[i]).classList.toggle('on',ids[i]===target);
+  el('field').classList.toggle('compact',name==='build');
+}
+var toastT=null;
+function toast(msg){
+  var t=el('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('on');},2200);
+}
+
+/* ==========================================================================
+   背景 ── 水没した監視塔の中
+   地の色／水面の揺らぎ／差し込む光条／コースティクス／泡／微粒子／周辺減光／粒状
+   重い処理は起動時とリサイズ時に作り置きし、毎フレームは合成だけにする。
+   ========================================================================== */
+var cv=el('bg'), cx=cv.getContext('2d');
+var W=0, H=0, DPR=1, tAcc=0;
+var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+var bubbles=[], motes=[];
+var cellSprite=null, cells=[], bubbleSprites=[];
+var lightCv=null, lightCx=null, LW=0, LH=0;
+var bgGrad=null, lightMask=null, surfaceGrad=null, shafts=[];
+var baseCv=null, baseCx=null, noisePat2=null;
+
+/* ---- 作り置き（起動時に一度） ---- */
+
+/* 光の斑：水面の起伏が集めた光。輪郭を崩した柔らかい塊を1枚だけ焼き、
+   大きさ・向き・明滅を変えて散らす。並べるのではなく散らすので繰り返しに見えない。 */
+function makeCell(size){
+  var c=document.createElement('canvas'); c.width=c.height=size;
+  var x=c.getContext('2d'), r=size/2, i;
+  var pts=[[0.50,0.50,0.46],[0.37,0.43,0.31],[0.63,0.59,0.29],[0.55,0.36,0.22]];
+  x.globalCompositeOperation='lighter';
+  for(i=0;i<pts.length;i++){
+    var px=size*pts[i][0], py=size*pts[i][1], pr=size*pts[i][2];
+    var g=x.createRadialGradient(px,py,0,px,py,pr);
+    g.addColorStop(0,   'rgba(206,250,244,0.42)');
+    g.addColorStop(0.40,'rgba(184,242,236,0.14)');
+    g.addColorStop(1,   'rgba(164,232,226,0)');
+    x.fillStyle=g; x.beginPath(); x.arc(px,py,pr,0,6.2832); x.fill();
+  }
+  return c;
+}
+
+/* 泡。太さ一定の輪を描くと作り物に見えるので、実際の見え方を組み立てる。
+   ・中は素通し。膜だけが光る
+   ・光は水面（上）から来る。泡を透けた光は反対側＝下の縁に集まって明るい弧になる
+   ・上の縁には水面の照り返しが細く乗る
+   ・膜の内側にもう一本暗い縁が出て、輪郭が二重に見える
+   ・鏡面反射は光源側（左上）に鋭く、反対側に弱い戻り光
+   ・薄膜なのでわずかに色づく
+   大きい泡ほど、直径に対する膜は細い（cfg.rim）。ここが作り物との分かれ目。 */
+function makeBubble(size,cfg){
+  var c=document.createElement('canvas'); c.width=c.height=size;
+  var x=c.getContext('2d'), R=size/2, i;
+  var rr=R*0.88, lw=Math.max(0.8,R*cfg.rim), G=cfg.glow;
+
+  /* 中身：ほぼ透明。外周に近づくほどわずかに明るむだけ */
+  var body=x.createRadialGradient(R,R,rr*0.18,R,R,rr);
+  body.addColorStop(0,   'rgba(190,236,232,0)');
+  body.addColorStop(0.74,'rgba(190,236,232,'+(0.028*G).toFixed(4)+')');
+  body.addColorStop(1,   'rgba(208,244,240,'+(0.085*G).toFixed(4)+')');
+  x.fillStyle=body; x.beginPath(); x.arc(R,R,rr,0,6.2832); x.fill();
+
+  /* 膜。円周に沿って明るさが変わる帯を一筆で描く。
+     分割して描くと重なりが継ぎ目として出るので、円錐グラデーションで塗る。
+     開始角を真下にしてあるので、位置0＝下の縁、0.25＝左、0.5＝上、0.75＝右。 */
+  var conic=!!x.createConicGradient;
+  function ring(width,hue,stops){
+    if(conic){
+      var cg=x.createConicGradient(Math.PI/2,R,R);
+      for(var q=0;q<stops.length;q++)
+        cg.addColorStop(stops[q][0],'rgba('+hue+','+(stops[q][1]*G).toFixed(4)+')');
+      x.strokeStyle=cg;
+    }else{
+      /* 円錐グラデーションが無い環境では平均的な明るさの輪にする */
+      var avg=0;
+      for(var q2=0;q2<stops.length;q2++) avg+=stops[q2][1];
+      x.strokeStyle='rgba('+hue+','+((avg/stops.length)*G).toFixed(4)+')';
+    }
+    x.lineWidth=width;
+    x.beginPath(); x.arc(R,R,rr,0,6.2832); x.stroke();
+  }
+
+  /* 本体の膜：側面は薄く、下の縁がいちばん明るく、上に水面の照り返し */
+  ring(lw,'228,251,247',[
+    [0.00,0.92],[0.09,0.74],[0.20,0.42],[0.31,0.31],[0.41,0.37],
+    [0.50,0.52],[0.59,0.37],[0.69,0.31],[0.80,0.42],[0.91,0.74],[1.00,0.92]
+  ]);
+  /* 下の縁だけ、透けてきた光がにじむぶんを重ねる */
+  ring(lw*2.1,'214,246,242',[
+    [0.00,0.30],[0.10,0.14],[0.24,0.00],[0.76,0.00],[0.90,0.14],[1.00,0.30]
+  ]);
+
+  /* 薄膜の色づき（ごくわずか） */
+  if(cfg.iris){
+    ring(lw*0.85,'236,186,116',[
+      [0.00,0.05],[0.14,0.15],[0.26,0.05],[0.60,0.00],[1.00,0.03]
+    ]);
+    ring(lw*0.85,'126,216,236',[
+      [0.00,0.04],[0.74,0.00],[0.86,0.14],[0.96,0.05],[1.00,0.04]
+    ]);
+  }
+
+  /* 膜の内側の暗い縁 ── 輪郭が二重に見える */
+  x.strokeStyle='rgba(8,28,34,'+(0.22*G).toFixed(4)+')';
+  x.lineWidth=lw*0.55;
+  x.beginPath(); x.arc(R,R,rr-lw*0.95,0,6.2832); x.stroke();
+
+  /* 鏡面反射（光源側）。グラデーションは変換したあとの座標で作る。 */
+  var hx=R-rr*0.42, hy=R-rr*0.44, hr=rr*0.26;
+  x.save();
+  x.translate(hx,hy); x.rotate(-0.62); x.scale(1,0.58);
+  var h=x.createRadialGradient(0,0,0,0,0,hr);
+  h.addColorStop(0,   'rgba(255,255,255,'+(0.88*G).toFixed(4)+')');
+  h.addColorStop(0.32,'rgba(255,255,255,'+(0.27*G).toFixed(4)+')');
+  h.addColorStop(1,   'rgba(255,255,255,0)');
+  x.fillStyle=h;
+  x.beginPath(); x.arc(0,0,hr,0,6.2832); x.fill();
+  x.restore();
+
+  /* その芯にある鋭い点 */
+  var px=R-rr*0.45, py=R-rr*0.48, pr=Math.max(0.6,rr*0.075);
+  var s1=x.createRadialGradient(px,py,0,px,py,pr);
+  s1.addColorStop(0,'rgba(255,255,255,'+(0.95*G).toFixed(4)+')');
+  s1.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=s1; x.beginPath(); x.arc(px,py,pr,0,6.2832); x.fill();
+
+  /* 反対側の弱い戻り光（主役を食わない程度に） */
+  var sx=R+rr*0.30, sy=R+rr*0.36, sr=rr*0.12;
+  var s2=x.createRadialGradient(sx,sy,0,sx,sy,sr);
+  s2.addColorStop(0,'rgba(255,255,255,'+(0.20*G).toFixed(4)+')');
+  s2.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=s2; x.beginPath(); x.arc(sx,sy,sr,0,6.2832); x.fill();
+  return c;
+}
+
+/* 手前すぎる泡は焦点から外れる。filter が無い環境ではそのまま返る。 */
+function softened(src,px){
+  var c=document.createElement('canvas'); c.width=src.width; c.height=src.height;
+  var x=c.getContext('2d');
+  try{ x.filter='blur('+px+'px)'; }catch(e){}
+  x.drawImage(src,0,0);
+  return c;
+}
+
+/* 粒状：平坦なグラデーションに出る縞（バンディング）を潰す */
+function makeNoise(size){
+  var c=document.createElement('canvas'); c.width=c.height=size;
+  var x=c.getContext('2d'), img=x.createImageData(size,size), d=img.data;
+  for(var i=0;i<d.length;i+=4){
+    var v=110+((Math.random()*36)|0);
+    d[i]=d[i+1]=d[i+2]=v; d[i+3]=255;
+  }
+  x.putImageData(img,0,0);
+  return c;
+}
+
+function buildStatics(){
+  try{ buildTextures(); }catch(e){ }      /* 一部機能が無い環境でも進行を止めない */
+  /* 光条：上方の一点から差し込む想定で、下ほど広がるよう角度を振る */
+  shafts=[
+    {x:0.13, w:0.17, ang:-0.22, a:0.135, spd:0.16, ph:0.0},
+    {x:0.32, w:0.09, ang:-0.11, a:0.085, spd:0.23, ph:1.7},
+    {x:0.51, w:0.22, ang: 0.03, a:0.155, spd:0.13, ph:3.1},
+    {x:0.71, w:0.08, ang: 0.13, a:0.075, spd:0.27, ph:4.4},
+    {x:0.89, w:0.16, ang: 0.23, a:0.110, spd:0.19, ph:5.6}
+  ];
+}
+function buildTextures(){
+  var base=makeCell(160);
+  cellSprite=[];
+  for(var k=0;k<4;k++){                       /* 向きを4種類あらかじめ焼く */
+    var rc=document.createElement('canvas'); rc.width=rc.height=160;
+    var rx=rc.getContext('2d');
+    rx.translate(80,80); rx.rotate(k*Math.PI/4); rx.drawImage(base,-80,-80);
+    cellSprite.push(rc);
+  }
+  noisePat2=cx.createPattern(makeNoise(128),'repeat');
+  cells=[];
+  for(var ci=0;ci<30;ci++){
+    cells.push({
+      x:Math.random(),
+      y:Math.pow(Math.random(),1.7)*0.82,        /* 浅いところほど密に */
+      s:0.10+Math.random()*Math.random()*0.34,   /* 小さいものを多く */
+      a:0.30+Math.random()*0.60,
+      vx:(Math.random()-0.5)*0.010,
+      vy:-0.004-Math.random()*0.011,
+      sp:0.30+Math.random()*0.85,
+      ph:Math.random()*6.283,
+      k:(Math.random()*4)|0
+    });
+  }
+  /* 画面に出る最大でも直径60px程度。原板を大きくしすぎると縮小の費用だけが増える。 */
+  var near=makeBubble(112,{rim:0.055,glow:1.00,iris:true});
+  bubbleSprites=[
+    makeBubble(40,{rim:0.230,glow:0.50,iris:false}),    /* 遠い */
+    makeBubble(72,{rim:0.110,glow:0.82,iris:true}),     /* 中景 */
+    near,                                               /* 近い */
+    softened(near,1.9)                                  /* 手前すぎて焦点から外れたもの */
+  ];
+}
+
+function seedBubble(atRest){
+  var d=Math.random();                                   /* 0=遠い 1=近い */
+  var r=1.6+Math.pow(d,3)*30;                            /* 大きい泡はごく少数 */
+  var s=(d<0.50?0:(d<0.86?1:(d<0.95?2:3)));
+  return { x:Math.random()*W, y:atRest?Math.random()*H:H+r*3,
+           d:d, r:r, v:5+d*d*46, w:Math.random()*6.283,
+           w2:Math.random()*6.283,
+           sw:0.5+d*1.7, a:(s===3?0.34:0.24+d*0.52), s:s,
+           ws:1.6+Math.random()*2.2, wp:Math.random()*6.283 };
+}
+function seedMote(atRest){
+  return { x:Math.random()*W, y:atRest?Math.random()*H:H+8,
+           r:0.4+Math.random()*1.1, v:1.5+Math.random()*5,
+           w:Math.random()*6.283, a:0.06+Math.random()*0.16 };
+}
+
+function resizeBg(){
+  DPR=1;                    /* 背景は軟らかい。全画面合成の費用は画素数に比例するので等倍で足りる */
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.max(1,Math.round(W*DPR));
+  cv.height=Math.max(1,Math.round(H*DPR));
+  cv.style.width=W+'px'; cv.style.height=H+'px';
+  cx.setTransform(DPR,0,0,DPR,0,0);
+
+  LW=Math.max(1,Math.ceil(W/2.5)); LH=Math.max(1,Math.ceil(H/2.5));
+  if(!lightCv){ lightCv=document.createElement('canvas'); lightCx=lightCv.getContext('2d'); }
+  lightCv.width=LW; lightCv.height=LH;
+
+  if(!baseCv){ baseCv=document.createElement('canvas'); baseCx=baseCv.getContext('2d'); }
+  baseCv.width=cv.width; baseCv.height=cv.height;
+  baseCx.setTransform(DPR,0,0,DPR,0,0);
+  bgGrad=baseCx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0,   '#0d323b');
+  bgGrad.addColorStop(0.18,'#0a2a33');
+  bgGrad.addColorStop(0.52,'#061d26');
+  bgGrad.addColorStop(1,   '#01080c');
+  baseCx.globalCompositeOperation='source-over';
+  baseCx.globalAlpha=1;
+  baseCx.fillStyle=bgGrad;
+  baseCx.fillRect(0,0,W,H);
+  if(noisePat2){                                   /* 粒状を焼き込んで縞を潰す */
+    baseCx.globalCompositeOperation='overlay';
+    baseCx.globalAlpha=0.055;
+    baseCx.fillStyle=noisePat2;
+    baseCx.fillRect(0,0,W,H);
+    baseCx.globalCompositeOperation='source-over';
+    baseCx.globalAlpha=1;
+  }
+
+  surfaceGrad=lightCx.createLinearGradient(0,0,0,LH*0.22);
+  surfaceGrad.addColorStop(0,   'rgba(196,246,240,1)');
+  surfaceGrad.addColorStop(0.35,'rgba(170,236,230,0.45)');
+  surfaceGrad.addColorStop(1,   'rgba(150,226,220,0)');
+
+  /* 深くなるほど光は届かない */
+  lightMask=lightCx.createLinearGradient(0,0,0,LH);
+  /* 合成するのは上から76%まで。そこで丁度0になるようにして継ぎ目を出さない。 */
+  lightMask.addColorStop(0,   'rgba(0,0,0,1)');
+  lightMask.addColorStop(0.16,'rgba(0,0,0,0.72)');
+  lightMask.addColorStop(0.38,'rgba(0,0,0,0.30)');
+  lightMask.addColorStop(0.60,'rgba(0,0,0,0.07)');
+  lightMask.addColorStop(0.76,'rgba(0,0,0,0)');
+  lightMask.addColorStop(1,   'rgba(0,0,0,0)');
+
+  for(var i=0;i<shafts.length;i++){
+    var s=shafts[i], hw=s.w*LW/2;
+    var g=lightCx.createLinearGradient(-hw,0,hw,0);      /* 帯の両縁を溶かす */
+    g.addColorStop(0,   'rgba(150,226,220,0)');
+    g.addColorStop(0.30,'rgba(160,232,226,0.55)');
+    g.addColorStop(0.50,'rgba(198,246,240,1)');
+    g.addColorStop(0.70,'rgba(160,232,226,0.55)');
+    g.addColorStop(1,   'rgba(150,226,220,0)');
+    s.grad=g; s.hw=hw;
+  }
+
+  var nb=Math.round(Math.min(46,Math.max(18,W*H/16000)));
+  var nm=Math.round(Math.min(60,Math.max(24,W*H/11000)));
+  bubbles=[]; motes=[];
+  for(i=0;i<nb;i++) bubbles.push(seedBubble(true));
+  for(i=0;i<nm;i++) motes.push(seedMote(true));
+}
+window.addEventListener('resize',resizeBg);
+
+/* ---- 毎フレーム ---- */
+
+function wrap01(v){ v=v%1; return v<0?v+1:v; }
+function drawCells(g){
+  if(!cellSprite||!cellSprite.length) return;
+  for(var i=0;i<cells.length;i++){
+    var c=cells[i];
+    var x=wrap01(c.x+tAcc*c.vx)*LW;
+    var y=wrap01(c.y+tAcc*c.vy)*LH;
+    var w=c.s*LW, pulse=0.30+0.70*(0.5+0.5*Math.sin(tAcc*c.sp+c.ph));
+    g.globalAlpha=c.a*pulse;
+    g.drawImage(cellSprite[c.k],x-w/2,y-w*0.36,w,w*0.72);  /* 横に伸ばして水面の起伏らしく */
+  }
+}
+
+function drawLight(){
+  var g=lightCx, i;
+  g.setTransform(1,0,0,1,0,0);
+  g.globalCompositeOperation='source-over';
+  g.globalAlpha=1;
+  g.clearRect(0,0,LW,LH);
+
+  g.globalCompositeOperation='lighter';
+
+  /* 頭上の水面 ── 段差が出ないよう、輪郭ではなく明るさで表す */
+  g.globalAlpha=0.10+0.02*Math.sin(tAcc*0.6);
+  g.fillStyle=surfaceGrad;
+  g.fillRect(0,0,LW,LH*0.22);
+
+  /* 差し込む光条 */
+  for(i=0;i<shafts.length;i++){
+    var s=shafts[i];
+    var x=(s.x+Math.sin(tAcc*s.spd+s.ph)*0.035)*LW;
+    g.save();
+    g.globalAlpha=s.a*(0.78+0.22*Math.sin(tAcc*s.spd*1.7+s.ph));
+    g.translate(x,-LH*0.10);
+    g.rotate(s.ang);
+    g.fillStyle=s.grad;
+    g.fillRect(-s.hw,0,s.hw*2,LH*1.7);
+    g.restore();
+  }
+
+  /* コースティクス：速さの違う2層をぶつけて、単調な繰り返しに見せない */
+  drawCells(g);
+
+  /* 深部へ届かせない */
+  g.globalCompositeOperation='destination-in';
+  g.globalAlpha=1;
+  g.fillStyle=lightMask;
+  g.fillRect(0,0,LW,LH);
+}
+
+function burst(){
+  for(var i=0;i<12;i++){
+    var b=seedBubble(false);
+    b.y=H*0.70+Math.random()*H*0.26;
+    b.x=W*0.5+(Math.random()-0.5)*W*0.6;
+    b.v=34+Math.random()*70;
+    bubbles.push(b);
+  }
+  if(bubbles.length>110) bubbles.splice(0,bubbles.length-110);
+}
+
+function drawBg(dt){
+  if(!W) return;
+  if(!reduce) tAcc+=dt;
+  cx.setTransform(DPR,0,0,DPR,0,0);
+
+  cx.globalCompositeOperation='source-over';
+  cx.globalAlpha=1;
+  if(baseCv) cx.drawImage(baseCv,0,0,W,H);
+  else{ cx.fillStyle='#061d26'; cx.fillRect(0,0,W,H); }
+
+  drawLight();
+  cx.globalCompositeOperation='lighter';
+  cx.globalAlpha=1;
+  var lh=Math.round(LH*0.76);                    /* 深部には光が届かない＝合成しない */
+  cx.drawImage(lightCv,0,0,LW,lh,0,0,W,H*0.76);
+
+  var i,p;
+  /* 微粒子（マリンスノー） */
+  cx.fillStyle='#cfeeea';
+  for(i=0;i<motes.length;i++){
+    p=motes[i];
+    if(!reduce){ p.y-=p.v*dt; p.w+=dt*0.7; p.x+=Math.sin(p.w)*3*dt; }
+    if(p.y<-4) motes[i]=p=seedMote(false);
+    cx.globalAlpha=p.a;
+    cx.beginPath(); cx.arc(p.x,p.y,p.r,0,6.2832); cx.fill();
+  }
+  /* 泡：手前ほど大きく明るく、速く上る */
+  for(i=0;i<bubbles.length;i++){
+    p=bubbles[i];
+    if(!reduce){
+      p.y-=p.v*dt;
+      p.w+=dt*(1.1+p.d); p.w2+=dt*(2.4+p.d*1.7);
+      /* 周期の違う2つを重ねて、機械的な往復に見せない */
+      p.x+=(Math.sin(p.w)+0.45*Math.sin(p.w2))*p.sw*8*dt;
+    }
+    if(p.y<-p.r*2.2) bubbles[i]=p=seedBubble(false);
+    if(!bubbleSprites.length) continue;
+    /* 大きい泡は上りながら形が縦横に脈打つ（体積はおよそ保つ） */
+    var wob=1+(reduce?0:0.075*p.d*Math.sin(tAcc*p.ws+p.wp));
+    var bw=p.r*2*wob, bh=p.r*2/wob;
+    cx.globalAlpha=p.a;
+    cx.drawImage(bubbleSprites[p.s],p.x-bw*0.5,p.y-bh*0.5,bw,bh);
+  }
+
+  cx.globalCompositeOperation='source-over';
+  cx.globalAlpha=1;
+}
+
+buildStatics();
+resizeBg();
+
+/* ---------- 開始 ---------- */
+function startGame(mode,diff){
+  ui.mode=mode; ui.diff=diff;
+  G=new A.Game({mode:mode,difficulty:diff,blind:ui.blind});
+  ui.viewer=0; ui.lastPrivate=null; ui.gateFor=null;
+  ui.phaseKey=''; ui.key=''; ui.panel=null;
+  ui.buildFor=-1; ui.buildAttempt=-1; ui.revealRound=-1; ui.logLen=-1;
+  ui.sel=[];
+  if(ui.cpuTimer){clearTimeout(ui.cpuTimer); ui.cpuTimer=null;}
+  keepAwake(true);
+  screen('game');
+  step();
+}
+
+/* ---------- 状態遷移 ---------- */
+function stateKey(){
+  return [G.phase,G.round,G.attempt,G.toAct,G.plateSel[0],G.plateSel[1],
+          G.submitted[0],G.submitted[1],G.buildTurn,G.raiseOpen,ui.lastPrivate].join('|');
+}
+function gate(pi,cb){
+  if(G.mode==='pvp'&&ui.lastPrivate!==pi){
+    ui.gateFor=pi; G.paused=true; showPass(pi); return;
+  }
+  ui.viewer=pi; G.paused=false; cb();
+}
+function step(){
+  if(!G) return;
+  var pk=G.phase+':'+G.round+':'+G.attempt;
+  if(pk!==ui.phaseKey){ ui.phaseKey=pk; ui.lastPrivate=null; ui.gateFor=null; }
+  G.paused=false;
+
+  if(G.phase==='over'){ showOver(); return; }
+  if(G.phase==='reveal'){ showReveal(); return; }
+
+  if(G.phase==='plate'){
+    var pi=(G.plateSel[0]===null)?0:((G.plateSel[1]===null)?1:-1);
+    if(pi<0||G.P[pi].isCPU){ showWait(G.P[1].name+' が数字を選んでいる…'); return; }
+    gate(pi,function(){showPlate(pi);});
+    return;
+  }
+  if(G.phase==='bet'){
+    var b=G.toAct;
+    if(G.mode==='pvp') ui.viewer=b;
+    showBet(b);
+    return;
+  }
+  if(G.phase==='build'){
+    var q=(G.mode==='pvp')?G.buildTurn:0;
+    if(G.submitted[q]){ showWait(G.P[1-q].name+' が役を組んでいる…'); return; }
+    gate(q,function(){showBuild(q);});
+    return;
+  }
+}
+
+/* ---------- 目隠し・待機 ---------- */
+function showPass(pi){
+  panel('pass');
+  el('pass-msg').innerHTML='端末を<br>'+G.P[pi].name+' に渡してください';
+  el('pass-sub').textContent='相手に手の内が見えないように。準備ができたら押す。';
+  el('pass-ok').hidden=false;
+}
+function showWait(msg){
+  panel('wait');
+  el('pass-msg').textContent=msg;
+  el('pass-sub').textContent='';
+  el('pass-ok').hidden=true;
+}
+el('pass-ok').onclick=function(){
+  if(ui.gateFor===null) return;
+  ui.lastPrivate=ui.gateFor;
+  G.paused=false;
+  ui.key='';
+};
+
+/* ---------- 数字板 ---------- */
+function showPlate(pi){
+  panel('plate');
+  var p=G.P[pi], list=el('plate-list');
+  list.innerHTML='';
+  for(var i=0;i<5;i++){
+    var b=document.createElement('button');
+    b.className='plate pbtn'+(p.plateUsed[i]?' gone':'');
+    b.innerHTML='<span class="n">'+p.plates[i]+'</span><span class="h">'+
+                (p.plateUsed[i]?'使用済み':'&nbsp;')+'</span>';
+    b.disabled=p.plateUsed[i];
+    (function(idx){ b.onclick=function(){ G.selectPlate(pi,idx); }; })(i);
+    list.appendChild(b);
+  }
+  el('plate-note').innerHTML=
+    '参加料 <b>'+G.ante+'</b> エアは支払い済み。'+
+    (G.carry?' 前回戦からの持ち越し <b>'+G.carry+'</b> エアが場にある。':'')+
+    '<br>この数字が、2階で組む5枚の<b>合計</b>になる。持ち時間は <b>30秒</b>。'+
+    '選び終わるまで酸素は<b>倍の速さ</b>で減る。'+
+    '<br>両端に寄った数字ほど組める役は限られ、札が減れば<b>組めなくなる</b>。切る順番が勝負を決める。';
+}
+
+/* ---------- ベット ---------- */
+function showBet(pi){
+  panel('bet');
+  ui.logLen=-1;
+  var me=G.P[pi], isCpu=me.isCPU, d=Math.max(0,G.deficit(pi));
+  var v=ui.viewer, o=1-v;
+  el('bet-n1').textContent=G.P[v].name;
+  el('bet-n2').textContent=G.P[o].name;
+  el('raisebox').classList.remove('on');
+
+  var bf=el('b-fold'), bc=el('b-call'), br=el('b-raise');
+  if(isCpu){
+    el('bet-turn').textContent=me.name+' が考えている…';
+    bf.disabled=bc.disabled=br.disabled=true;
+    bc.textContent='─'; br.textContent='─';
+    return;
+  }
+  el('bet-turn').textContent=(G.mode==='pvp')?(me.name+' の手番'):'あなたの手番';
+  var mx=G.maxRaise(pi);
+  bf.disabled=false; bc.disabled=false;
+  bc.textContent = d>0 ? ('コール '+Math.min(d,me.chips)+(d>=me.chips?'（オールイン）':''))
+                       : 'チェック';
+  br.disabled=!(G.raiseOpen&&mx>0);
+  br.textContent = G.raiseOpen ? ('レイズ ─ 上限 '+mx) : 'レイズ不可（時間切れ）';
+
+  bf.onclick=function(){ G.act(pi,'fold'); };
+  bc.onclick=function(){ G.act(pi, d>0?'call':'check'); };
+  br.onclick=function(){
+    var box=el('raisebox');
+    if(box.classList.contains('on')){ box.classList.remove('on'); return; }
+    var rr=el('rz-range');
+    rr.min=1; rr.max=mx; rr.value=Math.max(1,Math.round(mx/2));
+    el('rz-max').textContent=mx;
+    el('rz-val').textContent=rr.value;
+    box.classList.add('on');
+  };
+  el('rz-go').onclick=function(){
+    var amt=parseInt(el('rz-range').value,10)||1;
+    if(!G.act(pi,'raise',amt)) toast('そのレイズはできません');
+  };
+}
+el('rz-range').addEventListener('input',function(){ el('rz-val').textContent=this.value; });
+(function(){
+  var qs=document.querySelectorAll('[data-rz]');
+  for(var i=0;i<qs.length;i++)(function(btn){
+    btn.onclick=function(){
+      var rr=el('rz-range'), mx=parseInt(rr.max,10)||1;
+      var f=parseFloat(btn.getAttribute('data-rz'));
+      rr.value=Math.max(1,Math.round(mx*f));
+      el('rz-val').textContent=rr.value;
+    };
+  })(qs[i]);
+})();
+
+/* ---------- 役作り ---------- */
+function showBuild(pi){
+  if(ui.panel==='build'&&ui.buildFor===pi&&ui.buildAttempt===G.attempt) return;
+  panel('build');
+  ui.buildFor=pi; ui.buildAttempt=G.attempt; ui.sel=[]; ui.hintUsed=false;
+  el('bd-target').textContent=G.P[pi].target;
+  el('bd-hint').disabled=false;
+  el('bd-hint').textContent='思考 −25%';
+  el('bd-blind').hidden=!G.blind;
+  el('sum-box').classList.toggle('blind',G.blind);
+  buildDeck(pi);
+  buildInfo(pi);
+  refreshBuild();
+}
+function buildDeck(pi){
+  var p=G.P[pi], deck=el('bd-deck'), r, s;
+  deck.innerHTML='';
+  var hdr=document.createElement('div');
+  hdr.className='drow';
+  hdr.appendChild(document.createElement('div'));
+  for(r=1;r<=13;r++){
+    var h=document.createElement('div'); h.className='dh'; h.textContent=A.RANK_CH[r];
+    hdr.appendChild(h);
+  }
+  deck.appendChild(hdr);
+  for(s=0;s<4;s++){
+    var row=document.createElement('div'); row.className='drow';
+    var lab=document.createElement('div');
+    lab.className='sl'+(s===1||s===2?' red':'');
+    lab.textContent=A.SUIT_CH[s];
+    row.appendChild(lab);
+    for(r=1;r<=13;r++){
+      var id=A.cid(r,s);
+      var b=document.createElement('button');
+      /* 暗算モードでは使用済みの印を出さない（押せてしまい、その場でミスになる） */
+      var used=(!p.avail[id]&&!G.blind);
+      b.className='cel'+((s===1||s===2)?' red':'')+(used?' used':'');
+      b.textContent=A.RANK_CH[r];
+      b.setAttribute('data-id',id);
+      b.setAttribute('aria-label',A.SUIT_CH[s]+A.RANK_CH[r]);
+      if(used) b.disabled=true;
+      row.appendChild(b);
+    }
+    deck.appendChild(row);
+  }
+}
+el('bd-deck').addEventListener('click',function(e){
+  var t=e.target;
+  while(t&&t!==this&&!t.classList.contains('cel')) t=t.parentNode;
+  if(!t||t===this||t.disabled) return;
+  var id=parseInt(t.getAttribute('data-id'),10);
+  var k=ui.sel.indexOf(id);
+  if(k>=0) ui.sel.splice(k,1);
+  else{
+    if(ui.sel.length>=5){ toast('5枚まで。入れ替えるには選択済みの札を押す'); return; }
+    ui.sel.push(id);
+  }
+  refreshBuild();
+});
+function refreshBuild(){
+  var p=G.P[ui.buildFor], i, sum=0;
+  for(i=0;i<ui.sel.length;i++) sum+=A.cRank(ui.sel[i]);
+  var diff=p.target-sum, full=(ui.sel.length===5);
+  if(!G.blind){
+    el('bd-sum').textContent=sum;
+    el('bd-sum').className='v'+(full&&diff===0?' ok':'');
+    var dv=el('bd-diff');
+    dv.textContent=(diff>0?'+':'')+diff;
+    dv.className='v'+(full?(diff===0?' ok':' bad'):'');
+  }
+
+  var sl=el('bd-slots'); sl.innerHTML='';
+  for(i=0;i<5;i++){
+    var d=document.createElement('div');
+    if(i<ui.sel.length){
+      var id=ui.sel[i];
+      d.className='slot f'+(A.isRed(id)?' red':'');
+      d.innerHTML='<span class="r">'+A.RANK_CH[A.cRank(id)]+'</span>'+
+                  '<span class="s">'+A.SUIT_CH[A.cSuit(id)]+'</span>';
+      (function(x){ d.onclick=function(){
+        var k=ui.sel.indexOf(x); if(k>=0){ ui.sel.splice(k,1); refreshBuild(); }
+      }; })(id);
+    }else{
+      d.className='slot'; d.textContent=String(i+1);
+    }
+    sl.appendChild(d);
+  }
+  var hn=el('bd-name');
+  if(full){ hn.className='handname'; hn.textContent=A.evalCards(ui.sel).name; }
+  else{ hn.className='handname none'; hn.textContent='あと '+(5-ui.sel.length)+' 枚'; }
+
+  var cells=el('bd-deck').getElementsByClassName('cel');
+  for(i=0;i<cells.length;i++){
+    var cidv=parseInt(cells[i].getAttribute('data-id'),10);
+    cells[i].classList.toggle('sel',ui.sel.indexOf(cidv)>=0);
+  }
+  /* 暗算モードでは間違った5枚でも提示できる。誤りはその場でミスになる。 */
+  el('bd-ok').disabled = G.blind ? !full : !(full&&diff===0);
+}
+function buildInfo(pi){
+  var op=G.P[1-pi], used=[], i;
+  if(G.blind){
+    el('bd-info').innerHTML='<b>'+op.name+'</b> の目標数字は <b>'+op.target+'</b>。<br>'+
+      '暗算モードでは、互いに使い切った札は明かされない。<br>'+
+      '使用済みの札を出す、合計を間違える、100秒を過ぎる ── いずれも<b>ミス</b>で回戦を落とす。';
+    return;
+  }
+  for(i=0;i<52;i++) if(!op.avail[i]) used.push(i);
+  var s='<b>'+op.name+'</b> の目標数字は <b>'+op.target+'</b>。<br>';
+  s+=op.name+' が使い切った札（'+used.length+'枚）<br><span class="usedline">';
+  if(!used.length) s+='まだ無し';
+  else{
+    var parts=[];
+    for(i=0;i<used.length;i++)
+      parts.push('<span class="'+(A.isRed(used[i])?'r':'')+'">'+A.cardStr(used[i])+'</span>');
+    s+=parts.join('　');
+  }
+  s+='</span><br><br>自分が使い切った札は盤面で×印。互いの札が1枚でも重なれば<b>天災</b>が発動する。';
+  el('bd-info').innerHTML=s;
+}
+el('bd-clear').onclick=function(){ ui.sel=[]; refreshBuild(); };
+el('bd-ok').onclick=function(){
+  if(!G.submitHand(ui.buildFor,ui.sel)) toast('その5枚は提示できません');
+};
+el('bd-hint').onclick=function(){
+  if(ui.hintUsed){ toast('この回戦の思考は使い切った'); return; }
+  var p=G.P[ui.buildFor];
+  var cands=A.analyzePool(p.avail).bySum[p.target];
+  ui.hintUsed=true;
+  el('bd-hint').disabled=true;
+  el('bd-hint').textContent='思考済み';
+  p.o2=Math.max(0.001,p.o2-25);
+  if(!cands||!cands.length){ toast('この数字で組める役は存在しない'); return; }
+  var c=cands[0];
+  if(G.blind){ toast('組める最強の役は「'+c.name+'」── 中身は自分で探せ'); return; }
+  var rk=[];
+  for(var i=0;i<5;i++) rk.push(A.RANK_CH[c.ranks[i]]);
+  toast('最善は「'+c.name+'」── '+rk.join(' ')+'（スートは自分で選べ）');
+};
+
+/* ---------- 結果 ---------- */
+var PAINS=['八つ裂き','火あぶり','串刺し','銃殺','水責め'];
+function handBlock(p,dup){
+  var s='<div class="hd"><span class="nm">'+p.name+'</span><span class="hn'+
+        (p.hand?'':' miss')+'">'+
+        (p.folded?'フォールド':(p.hand?A.evalCards(p.hand).name:'ミス'))+'</span></div>';
+  if(p.hand){
+    s+='<div class="cards">';
+    for(var i=0;i<5;i++){
+      var id=p.hand[i];
+      s+='<div class="mini'+(A.isRed(id)?' red':'')+(dup&&dup.indexOf(id)>=0?' dup':'')+'">'+
+         '<span class="r">'+A.RANK_CH[A.cRank(id)]+'</span>'+
+         '<span class="s">'+A.SUIT_CH[A.cSuit(id)]+'</span></div>';
+    }
+    s+='</div>';
+  }else{
+    s+='<div class="note">'+(p.folded?'この回戦を降りた':('ミス ── '+(p.missReason||'時間切れ')))+'</div>';
+  }
+  if(!p.folded) s+='<div class="note" style="margin-top:5px;font-size:11px">役作りに '+
+                   Math.round(p.lastBuild)+' 秒</div>';
+  return s;
+}
+function showReveal(){
+  if(ui.panel==='reveal'&&ui.revealRound===G.round) return;
+  panel('reveal');
+  ui.revealRound=G.round; ui.logLen=-1;
+  var r=G.result, vd=el('rv-verdict');
+  var dup=(r&&r.dup)?r.dup:[];
+
+  if(!r){ vd.className='verdict d'; vd.textContent='─'; }
+  else if(r.type==='carry'){ vd.className='verdict d'; vd.textContent='双方ミス ─ 持ち越し'; }
+  else if(r.type==='draw'){ vd.className='verdict d'; vd.textContent='引 き 分 け'; }
+  else if(G.mode==='cpu'){
+    var win=(r.winner===0);
+    vd.className='verdict '+(win?'w':'l');
+    vd.textContent=win?'勝　利':'敗　北';
+  }else{
+    vd.className='verdict w';
+    vd.textContent=G.P[r.winner].name+' の勝ち';
+  }
+
+  var tn=el('rv-tensai');
+  if(r&&r.tensai){
+    var L=G.P[1-r.winner];
+    tn.innerHTML='<div class="tensai"><div class="t">天　災</div><div class="d">'+
+      '選んだ札が '+dup.length+' 枚重複した。<br>'+L.name+' は奪われたぶんと同数、さらに <b>'+
+      r.extra+'</b> エアを失う。<br>そのエアは誰の手にも渡らず、水中へ消えた。</div></div>';
+  }else tn.innerHTML='';
+
+  el('rv-a').className='sd'+(r&&r.type==='win'?(r.winner===0?' win':' lose'):'');
+  el('rv-b').className='sd'+(r&&r.type==='win'?(r.winner===1?' win':' lose'):'');
+  el('rv-a').innerHTML=handBlock(G.P[0],dup);
+  el('rv-b').innerHTML=handBlock(G.P[1],dup);
+
+  var pain=el('rv-pain');
+  if(r&&r.type==='win'){
+    var loser=G.P[1-r.winner];
+    var pk=PAINS[(G.round*3+G.seed)%PAINS.length];
+    pain.innerHTML='2階のペナルティ ── <b>'+pk+'</b><br>'+
+      loser.name+' 側の役作り担当がビッチ・ペインを受ける。体は傷つかない。痛みだけが残る。';
+    pain.style.display='';
+  }else pain.style.display='none';
+
+  el('rv-next').textContent=(G.round>=A.MAX_ROUNDS)?'決着を見る':'第'+(G.round+1)+'回戦へ';
+}
+el('rv-next').onclick=function(){
+  G.nextRound();
+  ui.panel=null; ui.revealRound=-1; ui.key='';
+};
+
+/* ---------- 決着 ---------- */
+function showOver(){
+  screen('over');
+  var A0=G.P[0], B0=G.P[1], res=el('ov-res'), cause=el('ov-cause');
+  var youWon = (G.winner===0);
+  if(G.winner===null){ res.className='res d'; res.textContent='相 打 ち'; }
+  else if(G.mode==='cpu'){
+    res.className='res '+(youWon?'w':'l');
+    res.textContent=youWon?'生 還':'溺 死';
+  }else{
+    res.className='res w';
+    res.textContent=G.P[G.winner].name+' の勝ち';
+  }
+  var txt;
+  if(G.overReason==='drown'){
+    if(G.winner===null) txt='双方のエアが同時に尽きた。監視塔の1階は静まり返っている。';
+    else txt=G.P[1-G.winner].name+' のエアが尽きた。足枷は外れず、体は椅子を離れた。';
+  }else{
+    if(G.winner===null) txt='5回戦を終え、残ったエアは同数。決着つかず。';
+    else txt='5回戦を終えた。'+G.P[G.winner].name+' が多くのエアを残して水面へ浮かぶ。';
+  }
+  cause.textContent=txt;
+  el('ov-stats').innerHTML=
+    row('残ったエア（'+A0.name+'）',A0.chips)+
+    row('残ったエア（'+B0.name+'）',B0.chips)+
+    row('呼吸に使ったエア（'+A0.name+'）',A0.burned)+
+    row('呼吸に使ったエア（'+B0.name+'）',B0.burned)+
+    row('勝った回戦（'+A0.name+'）',A0.wins)+
+    row('勝った回戦（'+B0.name+'）',B0.wins)+
+    row('天災で消えたエア',G.vanished)+
+    row('戦った回戦',G.round);
+  function row(k,v){ return '<div><span>'+k+'</span><b>'+v+'</b></div>'; }
+}
+el('ov-again').onclick=function(){ startGame(ui.mode,ui.diff); };
+el('ov-title').onclick=function(){ G=null; keepAwake(false); screen('title'); checkUpdate(false); };
+
+/* ---------- 毎フレームの描画 ---------- */
+function setP(pre,p,x2){
+  el(pre+'-o2-lab').textContent = x2 ? 'O2×2' : 'O2';
+  el(pre+'-o2-lab').parentNode.classList.toggle('x2',!!x2);
+  el(pre+'-o2-bar').parentNode.classList.toggle('x2',!!x2);
+  el(pre+'-air').textContent=p.chips;
+  el(pre+'-air-bar').style.width=Math.max(0,Math.min(100,p.chips/A.START_AIR*100))+'%';
+  var o2=Math.max(0,p.o2);
+  el(pre+'-o2').textContent=Math.ceil(o2);
+  el(pre+'-o2-bar').style.width=o2+'%';
+  var low=(o2<25);
+  el(pre+'-o2').classList.toggle('low',low);
+  el(pre+'-o2-bar').parentNode.classList.toggle('low',low);
+  var rem=0;
+  for(var i=0;i<5;i++) if(!p.plateUsed[i]) rem++;
+  el(pre+'-badge').textContent = p.drowning ? '溺 水' : ('数字 残'+rem);
+  el('strip-'+pre).classList.toggle('danger',p.drowning);
+}
+function renderLog(node){
+  if(ui.logLen===G.log.length&&ui.logNode===node) return;
+  ui.logLen=G.log.length; ui.logNode=node;
+  var s='';
+  for(var i=Math.max(0,G.log.length-14);i<G.log.length;i++){
+    var L=G.log[i];
+    s+='<div'+(L.who==='sys'?' class="hi"':'')+'><b>'+(L.who==='sys'?'▸':L.who)+'</b><span>'+L.txt+'</span></div>';
+  }
+  node.innerHTML=s;
+  node.scrollTop=node.scrollHeight;
+}
+function render(){
+  var v=ui.viewer, o=1-v, me=G.P[v], op=G.P[o];
+  el('me-name').innerHTML=me.name+'<small>'+(G.mode==='pvp'?'PLAYER '+(v+1):'YOU')+'</small>';
+  el('opp-name').innerHTML=op.name+'<small>'+(G.mode==='pvp'?'PLAYER '+(o+1):'OPPONENT')+'</small>';
+  var x2=function(q){ return !q.isCPU&&G.onStage(q.idx)&&G.isDeciding(q.idx); };
+  setP('me',me,x2(me)); setP('opp',op,x2(op));
+
+  el('f-round').textContent=G.round;
+  el('f-ante').textContent=G.ante;
+  el('f-pot').textContent=G.pot();
+  setTarget('t-me',me);
+  setTarget('t-opp',op);
+  el('t-opp-cap').textContent=(G.mode==='pvp')?op.name:'OPPONENT';
+
+  if(ui.panel==='plate'){
+    var pc=G.plateClock[ui.viewer];
+    el('plate-bar').style.width=(pc/A.PLATE_TIME*100)+'%';
+    el('plate-t').textContent=pc.toFixed(1);
+    el('plate-clock').classList.toggle('warn',pc<8);
+  }else if(ui.panel==='bet'){
+    el('bet-c1').textContent=G.P[v].committed;
+    el('bet-c2').textContent=G.P[o].committed;
+    var cl=el('bet-clock');
+    if(G.raiseOpen){
+      el('bet-clock-lab').textContent='BET TIME';
+      el('bet-clock-bar').style.width=(G.betLeft/A.BET_TIME*100)+'%';
+      el('bet-clock-t').textContent=G.betLeft.toFixed(1);
+      cl.classList.toggle('warn',G.betLeft<8);
+    }else{
+      el('bet-clock-lab').textContent='強制決着';
+      el('bet-clock-bar').style.width=(G.forceLeft/A.FORCE_TIME*100)+'%';
+      el('bet-clock-t').textContent=G.forceLeft.toFixed(1);
+      cl.classList.add('warn');
+    }
+    renderLog(el('bet-log'));
+  }else if(ui.panel==='build'){
+    var bi=ui.buildFor;
+    el('build-bar').style.width=(G.buildClock[bi]/A.BUILD_TIME*100)+'%';
+    el('build-t').textContent=G.buildClock[bi].toFixed(1);
+    el('build-clock').classList.toggle('warn',G.buildClock[bi]<20);
+    var ob=G.P[1-bi];
+    el('bd-opp').textContent = G.submitted[1-bi]
+      ? (ob.name+' は '+Math.round(ob.lastBuild)+' 秒で手を決めた')
+      : (ob.name+' はまだ組んでいる');
+  }else if(ui.panel==='reveal'){
+    renderLog(el('rv-log'));
+  }
+}
+function setTarget(idNum,p){
+  var n=el(idNum);
+  if(p.target){ n.textContent=p.target; n.classList.remove('q'); }
+  else{ n.textContent='??'; n.classList.add('q'); }
+}
+
+/* ---------- CPU の手番を遅延実行 ---------- */
+function cpuLoop(){
+  if(!G||ui.cpuTimer||G.paused) return;
+  var job=G.pendingCPU();
+  if(!job) return;
+  var wait = job.kind==='bet'   ? 900+Math.random()*1700
+           : job.kind==='plate' ? 700+Math.random()*1100
+           :                      2400+Math.random()*4400;
+  var ref=G;
+  ui.cpuTimer=setTimeout(function(){
+    ui.cpuTimer=null;
+    if(G!==ref||G.paused) return;
+    var j=G.pendingCPU();
+    if(j) G.runCPU(j);
+  },wait);
+}
+
+/* ---------- ループ ---------- */
+var lastTs=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  var dt=lastTs?Math.min(0.2,(ts-lastTs)/1000):0;
+  lastTs=ts;
+  drawBg(dt);
+  if(!G||ui.screen!=='game') return;
+  G.tick(dt);
+  while(G.events.length){ if(G.events.shift().t==='breath') burst(); }
+  cpuLoop();
+  var k=stateKey();
+  if(k!==ui.key){ ui.key=k; step(); }
+  if(ui.screen==='game') render();
+}
+requestAnimationFrame(frame);
+
+/* ---------- タイトル ---------- */
+(function(){
+  var btns=document.querySelectorAll('[data-start]');
+  for(var i=0;i<btns.length;i++)(function(b){
+    b.onclick=function(){
+      var v=b.getAttribute('data-start').split(':');
+      startGame(v[0], v[1]||'normal');
+    };
+  })(btns[i]);
+  var ob=el('opt-blind');
+  function paintBlind(){
+    el('opt-blind-t').textContent = ui.blind ? '暗算 ─ 原作準拠' : '盤面あり ─ 標準';
+    el('opt-blind-d').textContent = ui.blind
+      ? '合計数も使用済みの札も表示されない。数えるのも憶えるのも自分の頭で。'
+      : '合計数と使用済みの札が表示される。まずはこちらで。';
+    el('opt-blind-e').textContent = ui.blind ? '暗算' : 'STD';
+    ob.style.borderColor = ui.blind ? 'var(--brass-d)' : '';
+  }
+  ob.onclick=function(){ ui.blind=!ui.blind; paintBlind(); };
+  paintBlind();
+  var rb=document.querySelector('[data-rules]');
+  if(rb) rb.onclick=function(){ screen('rules'); };
+  var bb=document.querySelector('[data-back]');
+  if(bb) bb.onclick=function(){ screen('title'); };
+})();
+
+/* ==========================================================================
+   スマホで遊ぶための土台 ── ホーム画面への追加、画面スリープ抑止、更新確認
+   ========================================================================== */
+var APP_VERSION=(function(){
+  var m=document.querySelector('meta[name="app-version"]');
+  return m?m.getAttribute('content'):'0';
+})();
+var ICON_180='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAA1rElEQVR42u2d2Y9k133fC+L0VtX7Xnvdfa99r66ttxmSEsmhKNHivgwpLh7OxlUkJdkkZVgiKcSxSEo0YtmOENuAhQQOpNhBoOhBgPWit8RPMRwgLwHyR+R77l5V91Z3c3qp7mngh8Ltc3/3nHPrfOq3nVvVgaBaNEUrGRJKl03JVCDTkGyVSA5Sm4HkIXUiBUhjFlK0pNAgjcbZPFGeJlI1e8hWjD6dIaxBnWmcyyiIviiBKaVgilqcIq0WJWmIgYhJSQhL66JkOk/ERsRgwmi0gQgRsYDIkN6CRCwgtKIxqDOHcxkFUc11CfSQ4bIf+ir6k5Fzk1G3yKhbZHjBYZJRtoewJ3G+HiMIBz66Ohyq/XcvGelhZEw7nqXumI2cr9kI9pmNczJGmQwdhoCH2TiYQ/E2G+cO5VQ7FCvm6P37AA4l75Axc+5QzpZD6QlIg2rBClPJiVBvzqInLJ45S81KSZx8ZNplLXRxrIU5hD0VOX8uIyQGCUrBzlkCPX9byGBFQy7P0gfHABlecPQnq3aaZHN6vh4jRYYFhyubDfT93WM2/MjIOWTs12xYQ0ydm41TYTZ0MxHwcii9cOzpUHK+ZITOHcrpIWPQTAQO36FkfKuf5w5ltB1Kv5kwLEdB/7sYgqR1PjKQ8jQkW9bhqEznKjoc1Zm8JcRmVMyzWaKs81Qye0gbYxTN/iGKMQ9MKHcuIyT6omB1LBIsGNLFQNBCJqTqcLg8y3Ra58M0HpWZrA4H8SzVGcNU6NaC6Lj8iC6kNyP8DBqezLYWUu5cRkgs+2Etk2k8dBhKAedvPzIybjKqFhlViwwvOFQnyDDEMWLn6zF6cBCzYZLRYyYCblL8yAAKA3D4k+HKWs0hz8kYZTLkHjLcZiJwEIfibTbOHcrZcygGCYF9OZSsQ8bMuUO5AxyKCUdILYSMPEVPVaYhmdK0K1WZgeQssRITXYiykZhYPViJiWqMCpNlhcRS9lxGSPRFweqYy2SlKlhBi4SiBYcLmWlN58OyHzMZHQ5DXNZCF6JsWAtTLD8SNDyZbHOanRLPZWSE8EHWxVom03hg+fpICOxBRsYhY8aTDM0iwxV+GuJYsPP1GC04dDJsOHTPopMxHA4XGdNuMrIWGRlfMvrNxjkZI0yGh9nwciCB23IoWp9DGTQb5+sxmg5l0GxYS+kiIWDEINOQdHHaFZDOQLKWWOGnLkTZCD913CBO+GmKHfiImXMZIdEXBatjLpNiBqRYQXMpe2EIGLV0O0DVd1VKrl0VY9OkZG2aEE299t6TmOj1ebtcn52UdBEz5zJCIpnrMnxXxSEh7VUEs2KO8r42TQbKGJNi1hQhcy4jJPqi2J5F58PxLE6po7fO4VcEs+HYR/VTdsLPczJGlwyxh4z9FMGsv9N7m40+MoJ9ZEjnZIwuGZOuVMVzV2XQTAT6HUq67EpZzx3KneRQBsxEwF0utVKVklUad+riob66uCv8tBMTM/AR0ocl03JuTisuZMpLuYohOEYL2g9xlDMu+qLYqYpTO7dSFbKmrlTFgMEgwSmCWdltaViNS+6rcdk5tM1pepI/BJmR84uZylqhHik347VOot5NNrp4xTFa0I6z0DmUsc6yED7IunyB8qhTBJt2Sh8l43hY9VPur346Fuy27ycoZhbSpbViAxzQzW2+e1HculveuRen8IpjtKAdZ6EDTeifQ+APh06GDYfuWYLeRbCCRYZjJgK95VHbbBQtODzI6Dcbh0dGSMwuZSuwDVRzS9i8JG3d8+YPPvr7//6rf/7f//J//t//xSuO0YJ2nIUONKGPq8458CPDw2zIw8yG20wE9utQ/DdNDsuhwAZgpaOVFtPewZ/vf/IpgPATnIUONKGPq87th79DGTQbzq6Kn0Nxw2GUS4tWadypi4es8NMqjQ/Uxe3Ah9duUxbSRVgCpr2dqLVhIYaQYQh0oAl9XIVrb38CZ0r0RcHqWIVzq3Yu99TOQ7218z4SAq5dFYsMzZcMa9PELtcfGhkzcm6tWKeamzjeDxk2H9DHVbgWPZwz4SZj0ibDZ1fFgwzNIcOCwxCXH9ElH3IFGUREJ8gwxDFinHabspgux6ttoXvp/R99uk8yTP/yo09xFa5FD7c/jSMVLBJZEixDpqRvXemSKZEn6JQ8yfgOayx9UYjZMKNR4lmwfAQOV0BKltjlWQBALwyFPjj8yXBlreaQh0fGtJhdy9fojS1p6+7B5b/2hx8wzW2o4RXHgwq4CteiB/QzilggnFLygGCmUJ0rN+arzfl6a6HRNgTHaEE7zkIHmrf7lhpk8D1kTA2S0QvHABluOAbMRh8ZwT4yhEMjAzKnFCKlJt/ZRSbSt/DNrz3Cdy5Sjc1kvYtXHKOlTwdX4Vr0gH5GjQy8hzAPs6U6IFhsdZe628tbuys7l1Z378ZZvOIYLWjHWehAE/q46nbImLTJsFIV3Wz4kuFpNnAKcIAaIkaQoUsu5AoydDKc8NMQx71x6u3LglaMV1vi5qW+aAN2AquOU6v56lKmjFcco6XPfuAqXItT6OdQ5nM4ImihdGG2WJ2vN5famyvbu/O1Jvvic8Ufvt/+2893/+vf3P3rn+MVx2hBO85CB5rQx1W4Fj0ceFB9UaYEzVwpkYQdWL6glDGXUg9Isb5klc2YI08AMGMOiwQdhoDztx8ZrvDTHPJQyYAsZUrIO+Ttu//5X//FvepMc4tqdMHEtAR/oeIVx2hBu1sNV+Fa9IB+RoQMvFfT2dJcpbHY6mDJ1+6+BwSAhuECHWhCH1fhWvRAQv6DksFr9mfYWDhfMhQ3GQWLBAeGQN/fDhxSn9mwxhPsqFg9PDjKyXoHB33+Ai1ox9kvoHniZMxXN5Y6m/hT+84be2LhFuiTO+1soocD8MHbZqOXDHEYGXq00QeHQ0Jg2go/dcmFXEGGLk74aYjj3lj1sGQpXUpU2/LWgOXY0C1HrkoiTVbFK46J5dgYsBxbd6MH9HOIs/qCwmuIK+crIGMLnqLx539yIDIMwVW4lvRQ2UBvZNX3HNdIiCBmNErCjqCgw+FKVbC+ZJXNmCOP1TeCCiKuXMSAIWBi4kNG0Ao/zSGPgAzIglqMV1pi1yvmaO/iFJhYSpfximO0eMQcyGYrLfRz4nAgL0XqQUKHWhPxxBcgwxBcS/hob6I39LkfMiZtMqyA1JcM2SJDccgYNBOBYWZD8DMbh/yGzsn5SGmDb++8+f0P+7OVh74BGmAtkrUOXnGMlv5s5fsf4lr0gH5Olgy8dbOF6mKzg2NPm9H+m58I119e3b0Ee05IUgs4RgvaPe0HdNAb+kTP/mRYZoMfNBvWUg6QEXKToRY8HUggZPghORuyws+g4ahc4acptntjlcOVaSG9lqvSja60edGrzvE+s7EJNbzi2KPOsXkR16IH9HPoczuAIGTOFEnSsbWjffv1wcVmX3h2deficncL673QaBmCY7SgHWc94o9vv47e0Cd69n3njUAHYkajZtiBFQy6UhWsL1llK+yYhuVQLXGFm24YAn51cWvTxAk/JzhdWOUoBFlorEJKHe//6JMDVkg/wVW4Fj0c0dz2KVNyFinoYru7eunuvjXe/E8/Xdm9uNTdmm+0Zsv1mXwFkWYoU8QrjtGCdpyFDjT7rkVv6BM9o3+PcTlzXYbvqgR7d1VcAakZfHhukvjAMbCdZk/iiN7ZaSmDNDXV6OL4QHsr0E+Z6W7mZOEIpQtztY3lrZ3BrJWQ0dmcQ/aRKwdV8hibfRWO0YL2OT27geZgfos+0TP694PDTlXIh9lV4XDg8N5vy1s7aDkLjh4SAsOqn7wTfk4YwihHJ/NKIVxs0BtbCC3//lf72JX91a+gCX1chWuPdG57CklScuWFjQ7WuG91mW8+C6swZ+QdwMLzciGNs9CBJvT7ekCf6Bn9k0+p+0J9UZyAlN/XroqdqnhukrhhCFibJg4ZU31kcMdBBgRec1ErIq7EeuPP9/90mH/BWehAE/q4CteeLBz4tM0Wa4vtTfaFK30R6MrOxfl6iyytDxkOH7kyNKHfF5+iT/SM/jFKHxkTrlTFc1cl6LurYsPhu0kSCO5V/XQsGCMftQQJH7Af9VS9gwRE7O4iE4GFMOofeMUxWtCOs9CBJvSDhAz5ZAVmea5cX97cLn7c41OEay/BWcyWakElu49OstCEPq7q8Swfv4+e0T9GcfQNr8Qp7iLY1JDaOfEsWVcRzKh2Zq1SeGaw2hnYo/p5jGQYMsXBv+RXc5VYeYOqd7jWNlCQNi/hFF5xjBa04yx0oAn9EycDEtLy89WN5e2dvtrGys7uQrM9Y3qEPTohz7XANzXbuKqv5oGe0T9G6SHDSlX2uatikZHz3CQZNBMB93baVH9d3A58jvu9nhbTC2phNVuBbQAHiUozUW3hFcdoQTvOQmcUsDDhSBdIEruza+yo2YLP+nydJKL7vXEkw/UmrnJ3gj7RM/onMSkhwzYbPrsqe+y35RyzIfmajUkCh1395Purn457o+UTkRCnzYrZeTm/qBYW1SJecYwWtJ/UlHynqhE4cNAXS6KFLKpWOMx+jBgF4iqCTXkXwTJWzJG1imC5gWpnxtokcUgwSuGBvr+d6udJk3G6hCxqley591sOWbcc6eI++4EmsRzygOXY3kX/BA47gO3bVeGH7aqEnAppzjjezyZJwG/TxJrE+cLvDw41P18hRY7+mGN7d2GjPZMljzDu2Ql0oAl9XNUfc2ztoH895jDIGDQbzq6K/36bbTb8yXBlqQGduIG6uO0Faelc9iPw33Pl2nJ3q/jxe73ZyotLen0zKGf20UkGmtDHVb3ZynvoGf0b2QpWxyqcW7Vzvqd2HuytnVuF86znJkmwZ5NEtTZJSP+Bvr91OSfjwIJQbrZQWWx12d4SVvuvf7yCRAOeJVskWxD+PeAsdKAJfVzVU+f45rPomVTQpcyETYbProoHGZJDRsiTDEGz4XCbicDgdtrEudk4uOCjNZ0tLTRac5X6QIX0GVI7r9Sn0wU/PggZ6QJ0oAn9/gpppY6ep3MlkkiyPWZjatBseO+32WYjY8HhQUafmQhYQYYe/UJsF0hJZ1WmaGmGkxYEeVmSV2V5XVUimhLVlFjaFByjBe04Cx1oQh9XDe82ZNTButt9nsWIPJZaXZxFpoq1ISGddZW+0Z9BO85Cpy/asHzK9lylgbAGq2MukxVzEDhcqUqQ1y2HFXaERNNaEHEFGboQZTsXIcI6uYghgR4ymDNLRpCR5nl5RZax6smMwuRVvqhKZU2taumalq1ruYaWJ5LGK47RgnachQ40oY+rcC16QD/ozYM5IT2bqyxutFd3L/Xvyv7Hn5oPD9eas4XqTLY0Tb45lscrjtFiPNcDHWj278ruXiKPdOSr5Ist1rKZZLDDyAAKA3D4k8H1kwEQA0b4aYhj6CjxbEiQERcFaV2Vk1mZKyhyRc3U1eKGVm1rG910eyvd3cls72Z2LmYuXspcvDuDS/CKY7SgHWehA03o4ypcix7QD3pDn+gZ/TvD0VJIzc1XYDw2tXdfG3w4g3n+mZWt7aUWeZhjvrYxX23gFcdoQTvOejzP8e5r6G0eZkPLE4diRqPEs0xBOGXK5VmCEEGzYo50CJbDjDlgQjJGo04P0bT9iC6kNyPctGAgGAScv88WGXO8uKZIWEW+qGhVAkS9k25vp7cvZlZkCQfPPVr44FrlL75b/+XHzd9+1v4fP+38r591//U/bOIVx2hBO85CB5rQx1W4FgfoB72hT/SM/jEKxjIGxdsNS7BQb+K4/u/+jceTYH/9Y+GVFxFywpUQdqUMjtHSF4Eagh6gA3pmcmWsqP0ZNgICXzIENxkZi4yMRYYXHK4s1W0mAm5SdDn1WCwIUkSTmbyiVNTChtbopjd3MrOc+OV7s1jpf/xhEwR8McG16AH9oDf0iZ7RP0bBWBgR45L1RjpaIM4FmWf7b39yG8+Q/gQ9LDbbJA1Wsv1ksMPI0KONPjj8yXBlqX1mInCWHAqWJ6rJbEFJ19RKS8OnHD7i8n3ZH79dM6zCYQl6Q5/oGf1jFIyFETEuRl+QZDiXuRJ5khSr62k/9hRcpZNBergNh+JtNvbjUAwSAiQAtqOqlHhKZZYVw4rM5pV0Va22tO52Bsdvv1D63Z+1D5GJQUH/GAVjYUSMi9FxHEmri5n8XLEK+4G5ecYfw7638u5ruIrYnlLNfO4ca2SIHioSOMxolASkQU6HwwpIQ0KGiGE89GMj/NSFKBvhp9mDK/w0ZMIFQ8D196nEYooSVySJyipqhVgLLBIOPrpVPVImBgUjYlyMjjnggCpo64X8fKGyUGsudzZXdy4WP3pv72+8ffQeeQK5s7lAkpoKyV0JGZJFBoFjirHIYD3ICLrJEPciw5WlmkP0monApG2WU8KpkzlOjKqSUFQKDbW9qUVU6YNXyseMhVswOuaAmWA+QlmNF7PLxdI8HESjhSWHJWCffwYEIJ5wfVf2J2hBO85CB5rQn8kWSbmdkbA6OhwSrL1h9qdYecrlWYIQXg1aniUEyyFa4goydCHKRvhpiuVHzCGccNN8ewOnl4xlUUxlZa2q1NrazsX0c4/kkWWcIBmGYA6YCeaDWWFuVCm9VsjN5kpY+4XaBgLM5XZ3ubuF3BW3gFccowXtOAsdaIaULGICY12sZbPIYPYiQ3DICHmSwVlkuMJPQyYGzERgnBKJpIRTJFOUsCpLbF7ONdTWVlqpKD97r36gJfzNJ63P3q7dfLaIoLLcVKmsvCjAQ5md4xgtaMdZ6EAT+gfqH/PBrDA3zBCB6nomPaNkp9OFmVwJ2QfCzLlK3ZRyDS1ox9mgnJ3kVXNFSOFENGNDBImugNSpnXvvt6Wt0rg2JXjXxY3wU98kccLPQRICp46MECOEdVdSaqqbO+nHv5bbfyby+Tu1x7+eA1X3fqX41Ye3Hnvq/isvPvrS9SvXX3vp1lvXXn/n5hvv3sIrjtGCdpyFDjShj6twLXrYf0aDuWGGmCdmizlP82QPZQorJ2eQnZoi67+eBVPBSOY9GmRQPWRMDJLRC8cAGcM2TQZ33S0ihV44ksIpkmlGQJAhlxSkBrsX0/uMMP7ujxpYp0VefPChzlNXHrp685uvv3Pr1rduXX/z1tU3br782s2XXrv54qs3Xrx144Vb5BXHaEE7zkIHmtDHVbgWPaAf9IY+9xmFYJ6YLeaMmWP+e9xjSjTEyRqMRz16d1WmfHdV0lZp3KmLT/Vtnw1ukliD9k0GcPCnRWYYPqaJSlmut9VlUfirP9jblXz2repGR/3KfZUnnnnwxusv3Xr75rU3seo3vnnrxnM3bjx97fqTr1x//Oq1R18m8oglxp9ox1noQBP6uArXogf0g962dzT0jP73nAPmidlizpg55o+7GHab+keWhISm8SD2wx2Q9pc6iPFQXUUwo8alWpUMjzLGZH+10zIVA5M5NXBM62SoZbnRUZmc9MuPNoYvyV98t15rqw88uPHci4/ic39dZ+L5mwQIrPojLx9YcBWuRQ/oRyjI2ZpSa6mb2xpGwVjDJ4PZYs6YuarzMc0MJSMluPdrJoaQwbnJ0Pa1aTJQ7XT8yCmFI0TzUZXYDLy/YlH+9Z8OCw//6bPWQ/dnYS2uvPjIa2/fuvbGTXiKZ69/QSY8KVkShJgqcnk5Q3IlFVYEI2LcIbPCnDFzzB93gXvBHQ2QYZuNXjJoaX/lUc0xG3tWP2knMfEj43TAMZXiw4ool4g3wedvOBkf3aos8gKiyDfeuQUvgBgCH/dHvdb4nseern75stTajhVqi3IuxMoT+nuEVxyjBe04Cx1oui80ZjWZ4hd4BEAiX5BzdWWjq2FcjD6cD8wfd4F7wR3hvoaZjYM5FM1/0+SLOJRTA8eqJApFudoiccZwb4I48f7L9ZeuPXvzLcSYxFoMYtF+8GG23pnh1IOFO5yKq3CtDYeNCKxIIo0YmaS+Wzsa5jDcv+AucC+4I9xXHxnjX8Ch8A4ZwcNzKBYcCW6UZYnn2ZxUaii7u9pffbc2pG5RaykPP3LpjXduvvLGjedvXH/i96898pIj9z/1nNa9OMMqtzkfzx6mKW5dEjDPXE1udVXMZEhdBHeBe8EdQR93R3pIcsZiTKR4swClB6STvUWwKd/yqGrVuJwC157VzwkbAv+bHWk4Zhk+lRbxjiPu++Bqye/t/vsfbFAZ8YmnH3z1bRJ1PnutB4vLTz8vNbeOh2PMVqvIjbaK+WBWvvnt1RLuCPcF/VkrOJ1I9pChl0d7aud9cAyQ4QWHRcZkHxmOR+NOJRyTSS6iCAjv8Vl8/KHskBrGiiA88/zDt94iJYqnrvaQkd/98sTQD8fhyhzDxxE4lyQYD8xqSC0Ed4T7wt1FVHEyZZgNa+UMMqi9yOAcMvZrNqwhxvdhNkYajmWB5/PkXcZ77VcDxacTa3DlhW/cfOvGC7euP+Ei455Hnwpnysc/7WmaiyqCXDT58LMfuCODIcSziEK8HEovHHs6FM6XjMmDO5SRhmOGJiY6X5d3drSf/WHdL86A9YbNABnfvHn9cVeQUfvygyc4+RDFRWSTD8zQL/7Afe3spvN16Eiz7GE7FBuO/u20fTkUC444N4KyLgpKUWp11Cu/5xv815oK4gx4kxdABjKRF01Jdy+d+PxDKS4qk1tA/IF5+t3ClW/kW11NLSthWZpICsZTFJMQSiKiP8kxRetwmE9ykIc5gqzpSojoj2WYZxmirD+ZIZk92M/ooHNDEjAYuuzjLgAHO2oyz3BMRiw35LDE++3Cw2c//MjFV7+FOAOJySuPvGiKtLE5IncxTbFxRdDKUqur+MVMuDvEVZWmisxlgSef7EkIJUy6PMsUhJEs4yEHWVgOSwxTwRr0EE3bj+hCejOsxYQR8NrWYn+3MIpwRCQe72lnU/XLUD66Wb7//tobyE1evU4i0NEjw5A5mktpQq4qb22pmLPfzlx3S0tXyLbcxBAyGE8yFIsMLzhSTpBhiOMyTikcMBtsVqxsyLDJftXxRZZ76ZWnX3ldz1otMtLdiyMI+hJHbgdWEHP2q68jZ6m2NDYvL/LiEDKAgofZYHzNxkSf2TggGaMIB1yJVpK6m+qHPh+1h+5LP/bEfQhCn7/hkFG79/IIkmHIusgjON1oK5i5X8m/u53OVJWoJh3EofTAcbgOZRThmKU5OiPgc4aYw3uv9Tu1r3yl/MbbN15CqPGyScY9jzw1smSQ4CPFJlQ4F2l7W8X8Pe8LZkM3Hso87+9QWIeM4BE7FAuOGDM6sspzckFsd5S3ny94Zygb8pXnf+/a69effQVYXDUkrBVH6i4GZYll+ayAydeasud9vfNCqbOVRtqyLhPjMQWhxSkXIkEIa4kFhC5E2bYWujjWAq6EiL3eB5z2CMExlWASCp+vShd31N997vF9k8/eqjzwQOO1b9144ca1Ry0y8tv3jDgZkMk4E5X4TFnc3PJ+Puh3f9a+dClTbKiprBxi+uEYIMMLjpQFRx8ZCdsSMKcYjgWG5bJCvSk/cK/m+fHaaMnPffMb1167/vRV02xcfuq5iYN/IE7u7sRaU0Hw4Xl3l+/LNrqaUFSWBamfDMYhY79mwyTD5UcOPufAWIwZEVkTOKUodroKLITHHsr36l/+cpmYjZuO2RAb3dGZ/3CZgPFQhExF2t5RPfdcfvx2bXMnrVXVsCp7lUdlq/opTTK+22kTfdXPODtmyBea86jAMZlg4rpPQfjmuZPy2FczTzz1wLU3rj9jRRv3P3nltJBBJM4ucpyQFxtt731E3PUsJxY3NOJZWBOOATIOtmlikhFnTjccsxTLZITqhnzPJdXT6sIsX3/1xZduXXv8ZdNsqO2dU0QGJJhik2mxWFcWOd7zHr98b7beTfNFdUGQfc3GnrvwicMxGzocUXoUBPG8lBdabfn93y96fN/k7erlB5u33rz+3LVXHnnhqiHTlDgik99b9PcaIeG6yKslqbulfv6OR1j6vVfKne20UlFXZbL8rmzWSFZFK1n1KGNYNS4n/DTX+DamPSpwrAtsuiRubSr/8PGGl09JP/n05WuvXXv6qklG6/6HThkZBA52geX4nK9n+ccfNncuZrJ1NZqWLTKkfW2aDJQxHANw2uGYiNFxmctXRdgPT3vLpPmr16+8DJ/ykgkHU2meEjJss0HWLJRiU2mx1FC4rPfmAGxGqakls0qI6YNjH9XPhJOY3D4ZowJHKElTGl+uS3ArHs9t/Ki1vaVkSmJY5KB8ynyKy2wQSbARRchW5Z1dzfM5D7iVWkdjC+qc4Gs2jsGhjBAccxTDZvh6U7rycMaz9tXuyHJeWOHYU+NKXGTYZkOHg1sVBbWMsEP7sVc17LlHC83NjFhSlySnnnH8DsWGgzpxWWQYMcc325JnNHrjqVyjJfFZfp6mR2G2+5UYpfsUejxOk+okJAEhCa1YkJpd9eYzHlsE37tWITFpVV1VYDZInXSSNvbxIeSbEPoDhRwxGESIKdKFMYeIGY7scN6owFiEOnFZZhk5z3c60k+/7fFheuAetdoQaY2bSdKjMNv9iv7hG4eYbsW0H3P6Mwn1lnL5KxnPb3Fu7WbSVXUdcAxUPyd7q58T/XVx+0N/OLcwEnCscYxaEDa78i8/9CgdlmoiJKVwwfgpI2PMJsPyLBPkCTGOSouVplJpelR0/svHZsISUeUpTzIGN02sIRyPEDlDcKzzTLoobG/Kv/V6HAZYFKpiXGInoqfNbMR6zAbIwIpOJbmkRhIWOuORsPz2x+2LlzK5hhrTZNOb+JDRbzYOm4xRgSMssJmSsLMlez4xukDR+YoQE9nxU+5QyIomuMkEF9fEQl1Z4oXBm/2fP+1cujtTaGgmHH5mI+5nNqizBkdEYLNlYXdb9txVmYxSubIQFdnT7lDMdU1ycZXAEaR4zx2Wu3U44mlp/w7lKMyGDkc4deISEZhsiceBZ10I7TgLnVGY6t6iv63jUWrcNB6Ekgl9V3bC8iwxRSjU5Mkk53m/Uymh0FBgXcAEdCZdfkQX0psRfppD2NbisO9lhODY3fKxHJFUrsRHTwUcBhkRiwzLfrjJwErHAUddDqa8LcelS5l8XYF18YbDZS0McT7rZxKOMM9kivzOpk/MkaLyZT4mMuOjToZtNnrJiPWQMZXgEhrZm/WLOS5eTOdrSozA4WE2xvvMxpGRMSpwrHNMusBvb0re2YrMFipCXGImIqfKbHg5FKx0MMkZ2yu01/bKbz9r715M56pKVCFwnJRDGSE41lhazfObXcm7zlEVIEAkGBt1Msb2ciiT5GvAHJLYalP1rHP88qON7R0tU1HCsnCCDsWGI3nissxQco7rtMWfvlvxqpAq1bpAq8xMIjUKs/WQSFL3KanxaEoPRanxGITsNutw6JJgJyFJdp7luZxYbysP3pfx/O7F5paqlaU1gdd5si6PG6aIJj0bQ0QMR3aE70lgbD154rKYosQ022yK77/ssd1w48lsoyHwGjufTI3CbD1E/5whJBo33YppPwgcLs8yGSd8LHG8mJdaXfWW597K1VKnq8oFcYXjDGthiuVHzCEcD3uE9zUScMwlUqzK1uvCla97fCfsszfL7ZYoZ9kVmhpZMsZsMizPMhH1IAOeYk0k367e9NuV/UZuo60IOXGB4YwgQxcn/DTEMf5HeWuBC+vJExcEEymZKVd5GA+v5zmaW10pXeDCHD0Ks+2XcOqCK1XR9zOdgNSpnSfMIlhUEbI1ZXc37fk8R7urVDdkOi1MUz2JSU/1Ux+RyBHf2kjAMR5OxgQ6V+KXKMqzLkQrTKHCJyRmKjqSZIR7yPDbVZnQf1qOyojlDZXLez8JtiLwxZqcUBGN+lY/TTLCyWOAIzEKssZSWp7d7Ij/8LFHwvLYZbVW51mNmUsmR2TCRLA8uozZsaH+GIQekOp86E9y6NEoo8PBLvKcUJA2OuoTX/d8hnRje1tJl8WwxNrhp/l0hSv8NMc9+hscFTgWqZSYYZpNwTMm/fxb5U5bUHLsKkONGhx2qjIWTY25UhUPOJJsWObTFXlrW/0zr/++8MHVEtyKVBCWOdZOTHQ4LDIix0eGDsdaYhRkJp6E76hU+Xu2ve3tfCKZL3FxgZ6KjMSEDcPrDkj33FWZplhKL38t8T7fW7mk1jZkNsPPpRjP6qdj84/lHkcFjolwgoQdRS4UTXp/4+0BtV7nOY1ZSKZGgAwLjoOUR5d5XipITfiUr3l/420mxRaqYkLmpuKu6mfESUyOk4wRggOySqeULNtpCchdPb4r+0Ftsy2m82yEo8bXR8xs6KnK+BCzQZ7xIT8RlquR30f8ued3Zd+qdLuyWhDWedaoZ/SQET5uMkYLjrlEklWZao2//5L3j1jAcsDvMAoDzRMn48JBHMqEXvsSclK9pcByeN7dA/dq9abEZfgFmjlxh2LDER8RmQjHYwKVK7I7m+LvPm95VcNK3Zag5ZkIlxpfP6F5Ylw9WBsLJ9y18/GIVTiP2oVzq3aeYAyzka1KCEU9a1+/+7x9cUfOV4SEzE7FnfDTHMIOEo/3ZkcIDsgylZSQs2zw37ri/duMlSoHYVV6ATntycChk7Ge2MeuigPHCs+JBbKfUvf5cY63ny+025Kc51c5ZtzKfZDskDQnaXyngRmPk7TlQjhxjHCsxkdHpqOJlEgVyxwt0d6/CfZuZbMtZPJsjKeCSFuOeYaWvR2+qzLRu6sym2JTqpCvSTs76l/6/CYYk+bKNZFWudkkyV3JLl2Kn6KFKVayhXyBJUV24zAKYfTo73e04ICsMQhLmXZT+ME1758F++o9cqPOi2kGAeyJwEHMhklG0iKjF47e/baIyKvk15iVr93v/WuCH94odTuSVuDDPLmEYMGKQV4Jidq0lJ5W0hh0Wk6HJC0oKIQSCogwsC53HByzsQQt0+UKJ6UZ798h/bQ5n0iWyhwj0wuITI+ZjLUeMsYGyeiFY5kjX6uvbshLnO/vkCp5vlIXWY1bYFiYB4KFpIEA9rmnqp9+f/sXP7v71z/f/sW/r37yfebZJyeSXAiIMOJEkj1qPgBHbNRknUmqWbrd5N9/Ke/9UbtW6Lb4bIFJCKmZWPw4ZmW54TEj4LBijnGIGY2SmGMCEqMmrJhjnmZpjS/UpO1txfcXjH+/0NHNRlTmJmketgFGIvXowwYTgwJKko98PSSpsC4IR0jN9MjuehThmI3FKQmRBwtK/H77/LEHlGaDA0NRLhWMxI8HjrF1Cw49VdHJ8IEjTs9QdELhMxXyK2dPPJTx++1zuJJyTWAy7CLPB3kZTkR85QVPLNwivPJNwgcjTCRokkDdOXBAVumklKY3GtyzD6l+/3KgUmXrNXgfOswmp8JHT8ag2Yj4mo3pFB2Tea0kNttyvSX7/teEh9OtlqjkubBM4oyQrMFm7EmGIcR+CPIkxWH0I4NjJTaCEorEE3wqV2C22sLPvuv9Lxd/86NmUkhVK5yo0et0cmr9aCZD3ibigMeMgMOKOcbJkwZONDoR0eHQY47pJB2VOKUgNpoyneZ9/9/KH1R3NqV8mU8p7BwHs6EgzvDzJp7+hRReEXzEGYLvEdz7iMIBWUwkOIWqVFhJo33/U9Mf15eSCeiAjzCTDIaP4D0yyLDh0FMVnQxvOGZgM3Qy6k15lef+8/cbvv+pKcfV6gKfZldYFllrSFTZK0/2EaC9++pctoBp4BXHfWeZZ5+AJ5pMcqS4fkfBMb4aC9NJJU0369yj9/v+P5u/+6AGPqoku6GjbGomGj90MjzMhg8Z8ykmLnOabjNAxs//yPc/VT/+oNZqimqej3D0VIJBgoqsFblJHxkgJshKQAevOO7jA/kLGmFvMI0jgiN64jK55t0+HYkl+GQ2T3eb3Psv+f7LJtiPpJCs11g1Q0N/IR4/nImtRg3XO7YWGzNjDhJ2jEOMaFRPVSYgUQi1zNCUyqZLQrMl0Wlfm2FkKJsdMVfiUxI9E09OJJggJ84oaXgK99rPZfNBpCQJBlEF0WFFtPR5lmmEpTRPwo4jWJcTg2Nynaz9XCw2H49jOfGKY7Sg3a2GU7SUKhSZnQ7/l9/2/X/PiD/gXJC/gCRGSq1SiSBC1NuFQydjtYcMAkfYgiNiwjGTJF/a49JcviJ0OnK9KQ37v7Lfqe5uSqUKz6rMUiqFDpFxYOExRJ/XwBzshccrjnEwROcI4FiOHr+EwrH5WHw5GV+jEmE6EaHJK47RgnacdSsvJxO8TJVL7FIi/ssf1If8v+fH7pNhY0pFRlSpGEtMyPjKF52kZVrHjIDD8izjEFfMMRVJLdPIrFglRwpZ25vyE19ND/uP1B82lmmqWhOENLvKpIw+kd0EGXFG9rIcerxJEIwzOPawHKI6ZbiVI1imE4BjOhxbjMfXqQTWT9aoJy8rNx9P4xXHaEE7zk67+JhYjYIbrHe1wtJi6td/Muw/ln94rQC8GlU2k6NZKQXs5qJfCBGTDAsOYjwMMkw4JiPJhRQVExkBBkN3JUs089GN0rD/Zf9vm4zK1OuCnGHDLDW1bsQxcbgkRBVYZsQQPTHHO6+GBCVI/okCj1cco6U35vhjNE6mOJB6JHDctRw9ToG1xwd6nU5APnm9/61Ei3EKOtC0r0JQgkZJo2oVlleo4Xz806fNBy9J3SZfKZMoBF4JZgluC53sd54rsbvcAelaz65KMJpcpKiowHAamynytQYxGA99Rf2nT1vDyRAyXL0hyFkuwtNB+2FHkBdJTaZIBYx+9on+bOWdV2ezeUwJr31kQOhnnghyEhLaC+uJo1gswBE5NplYiyCwWKMAR/y//dA7XkM7zkIHmtC3r51aj4YZ8JGqVRhKTP5iqH/R92/LlTLT2eDKZUbLUpycinGJlVR8NhqbXBs6z5WoIX1FsGAkPp9MrjFUQqKRf2aLXK0hbHYlwPEX36kOnwy8CQ2b0eCVLBvlqVDM2nY3+l+PT8TpKUYYTzB9nmV4nWMcVyHgiFF3rUaPYr2OFY5QOLqUjEdZ2IzikLcSZ6EDTei7Lw9afFQrzGIi9pffLg9fEvJ80BvFepVBIFKrMrkCLacpRkrGORin+FIiBlAwBFgZX41ccMFBAsC16FQ4Nh2NzyUSy1QyzKaSEsVpjJpjCxWusSFsd8WNpvDZW3vPARHoEk3VGryskzEdI65Eh8OuRUbHIsmJFAczkPi9h/YJBzSJ2UiyY+HEEa3XscKBxVil4vAOPYXC71ZuPJ7uK4NCB5rQ7+sB9gPrKqipconZbnPvvZjbc230Wkj10ftkmKL2Bguw8gUatkTUUqycghFK8Ih+EhGGBMWADxJlkzE+lRRSNIBQaSnDZApsscLV63ynLSykUo9f1v7ue7X9DI2sFblJpSZIWSZCbEZyzH6axrJMxFCtxcbj1CTFBQVZuPr83nsrV58PGrVzYjZiRwbHUuTYZC4aW6fiTz7g7DX87DsVLEyYBKcJHNvt0IEm9Ac7mVyNrKbiHPLbAg2v8eh9vv/p3uP7L2+WQAklJLeaXKvO1qtspcQUC3Q+T2dzdMaSXIHJF9lSia1UuUadbzf57Y7IyPRjl9XPv1XZ51iY1eOX1c22WKzwfJpZZ8jTSYQMs7Bm1ZosBw9cxmP0JEWCD1gFP/+CdmIzeJnUvmI0rjq69To+OCZWIvPRGDiAnXC+Qf94Gi1D2nHVYFfjK5HlRBxrnMnSGzVWVFNusPYjv/nT5mevF68/pt2/KwCyBIekJjZOPDdJjubjCZiNYpl94JJ044nMZ2+WfvOj5oH6/9kfVJUc12qK2SJ5InqFTk2S3IQkPj1krFjRn35fiE8JH/AvrIQD+pnHK5/8sUEJXnGMFrTjLMlQCBmJI12y02c5bAE6cTaBBBguBpbgma8qfvv7xymYw5Wvp3c2pVpdUHNcUmIWU2Y9Y8x+jsYqojipgXVTxH7ojwmS9JU8DyYjWUU7yWl5GS1TlPWk4FHaDBuO8LHJbCS6mopJas+vBoKJG49rfR996EAT+sM7DK1H1qkYKyWzOWqjxqylYu+9mD1BMhBhhDkaBiNf5niNCXPUTDxhFlhd4adZgrS9e999rUTH1uOkZB6nJ5PMZIo1Jan/hEs0hbMkTDn69TpWOLCWyBGiTHzvbIUh2QT09+xzbDm8EIvG2Th4QvTQahAv84NX8seMxUc3Skqe63TEcpWHQ0nJ9DKVmgjbZMCh9JKxYsd9Pre2AisSIzX7cMIU8m0MRK+RY1uvY4VjYjU8F43i842P+7A6BxWDDjShv8+eg+uRlWQsxScULVUq0u0GSwmJt57J/O4nrSNl4neft99+Ps9qbLcjVeq8lucYlVknBiOpV8zi/WbD2ra4y89sjJIE7loMH6cE1yL4oK+Dj1Tsk9f67QdajFPQgeZBO58JR9aSMQqI6FZko8rstLj7tgXEnvvPaPaZifz4zfLle5SL23K7JVaqArBgVSbC0fOJ5Li5v29tyqzGxqzw06xM2379eN/8g0rg+IeEs8DaYxWjNPEFiD1vPKbhFcdoQTvOEofyRfsHIqvJWJJLiEoym6WqJbpdZ4Ha3V3+vRey//BR/Qsz8Y8fNz54uXDvrjwbpzY7UqMhFsq8kuVohQ0TLFL6tkuiH44VJ2s1xIr4wqMPx/rxS3AtPBeJLMWjq0liRcK6tcAxWtCOs7c/RGgtjN6idIwRErIKSlKVErVRpTc3mMVYBNHrMw/KiF7//J3yL35Q/+2nTWQZhnXBK45/+2nrlx/Wf/pu+f2X81e+prWbPGKI7Y7YbglIQ4plXitwfJpNSvQaQ80mdCaIxMctPzJmbPe7wk9TbLt9Eu/8gSRwUgNPrJD1mw1HQMN8hLziGC1oP8xRltfR7UqCUELxcUFOqFoyl0uVClStTAMRRCebTXarxe20uZ0Oh1Xc7fA7HX67I2y2+E6Lb27wDfIFbq5Q4tIFVsoynMqAiXWOXqRSwWhSf7zDl4wxK/y04Dg1ZJwkHH1LeNRDjC+vT68jr4HHIaAkuTgjJng5CV+mpiktQ2WyVCZPZ3XJ5Jl0jlFztJxhxDTNqTQt0wmBQmq6QlPzqVQwlpyIJCfM58ESvmZjpd9s3LV0Dsdoy9jS+tQaCU3mY9HlRGw1RTaBjY2VCIRNhpnkOpNco1MrVHIplUSMOR1LTkbIA2AAgmARseFI7O1QVk6fQ7HgWFi/E0UPuC5AliJEyOJFx5aJF0D8OGY95jO+SpbcesYnMbGuw2GI8TyYHn7q4iQmupDe9PAzYg5hh5+n510CHGt3nFifDCyYKfone2wlosMRJbHCKnn8fXwtpsMRh2GYIHCQn6cioh8b1kIXomwHGToZjrUwxPlEnp436s6DY3HNIsOCY5nAMbZskbHiQca4m4zwXmS4wk9ziFNIxp0Jh07GYg8Z+zIbPWR4wbHSZzYsMpZsL752DscpdCjLh+dQVs6CQ7HgmF+7g0SPs4jZMKNREpCOLelwuAJSAocrGp1YM5kgoseeRIhCbNwVfupCejPCT3MIO747hW9X4Evza3eKLKx/yZWq6Fml/giFnqroX0cg30gY6/1Ggp2qeNTF97FpYgz6pYVT+Y4BjtU7QrA8ujhGXi852J6FVCNcnmXM+hakFZDGrUrGQaqf1qCn9E27s+CwU5W7ltbv6g1I++EgZMTsVMUhY82XDKvG5YSfp5qMOwYOg4xBs7E8zGwM2IyhZmOg+vmlhXM4TgEZq8fnUJbOiEOx4JhbPeOix1Z2qqIvnpOqeNTOdQKsVMVMTPpK43118Qtm+GkXnq2Y7pS/dYBj5SyL9SHoL4J5lEedUse4U+ow0tqeMsbYXtVP58N3yt+9Mw3H/IpFxqq7dn6htwg25lsejVk1Ln8yBqufZ4WMMw+HTsb86j52VXrNRg8ZXnAs9ZkNu6poO+yVczhOoUNZPDyHsnRmHcodAYeXQ+mFY0+HsupLxoWz61AsOGZXzqDowfZdEDNP2deuyri5qxL7YpsmVpB/dt5GwLF81sQC/y4j4LA8ywWIy3iM6d+WG3N5lnHIqiWWtdCFKNvWQhfHWphif+DO0Dt5ZuG4a96CQ/csOhk+cBAyIhYZMYeMFV8yLljhpwXHGSTjLMJhkDFoNhaHmY0BmzHUbCz0m40vzZ3DcQrIWD4+h7Jwlh3KmYSj12wczKF4m40706FYcMwsnRGxbukugw8LkQsLqxdciIzp31sZsxAZX44QWdFFPzashS5E2WaCiCv8NMR5K8/M2+iSswLH7JJFhgWHHpBemLfIWPAgY8xNxspeZLishTnEmSbjLMGhkzHbQ8a+zEYPGV5wLPSZDYuMOdv8Lp3DcQodyvzhOZSFO8uhnDU4vBxKLxx7OpRlXzIu3GEO5azAcXQOZe84dOlsw/H/AaXGMODj54n8AAAAAElFTkSuQmCC';
+
+/* head へ後から差し込む。アーティファクトとして配信される場合でも確実に効かせるため。 */
+(function(){
+  /* 既に head にあるものは触らない。build.js が作る配布用では静的に置いてあるため。 */
+  function meta(name,content){
+    if(document.querySelector('meta[name="'+name+'"]')) return;
+    var m=document.createElement('meta');
+    m.setAttribute('name',name); m.setAttribute('content',content);
+    document.head.appendChild(m);
+  }
+  function link(rel,href,extra){
+    if(document.querySelector('link[rel="'+rel+'"]')) return;
+    var l=document.createElement('link');
+    l.setAttribute('rel',rel); l.setAttribute('href',href);
+    if(extra) for(var k in extra) l.setAttribute(k,extra[k]);
+    document.head.appendChild(l);
+  }
+  try{
+    /* ノッチ下まで描くために viewport を入れ直す（head 側が優先される環境への保険） */
+    var vp=document.querySelector('meta[name="viewport"]');
+    var val='width=device-width,initial-scale=1,viewport-fit=cover';
+    if(vp) vp.setAttribute('content',val);
+    else{
+      var m2=document.createElement('meta');
+      m2.setAttribute('name','viewport'); m2.setAttribute('content',val);
+      document.head.appendChild(m2);
+    }
+    meta('theme-color','#04141a');
+    meta('apple-mobile-web-app-capable','yes');
+    meta('mobile-web-app-capable','yes');
+    meta('apple-mobile-web-app-status-bar-style','black-translucent');
+    meta('apple-mobile-web-app-title','エア・ポーカー');
+    link('apple-touch-icon',ICON_180);
+    link('icon',ICON_180,{sizes:'180x180',type:'image/png'});
+    var mani={
+      name:'エア・ポーカー', short_name:'エアポーカー',
+      description:'水没した監視塔で、呼吸を賭けるポーカー。',
+      start_url:location.href, scope:'./', display:'standalone',
+      orientation:'portrait', background_color:'#04141a', theme_color:'#04141a',
+      icons:[{src:ICON_180,sizes:'180x180',type:'image/png',purpose:'any maskable'}]
+    };
+    link('manifest','data:application/manifest+json,'+encodeURIComponent(JSON.stringify(mani)));
+  }catch(e){}
+})();
+
+/* 対局中は画面を消さない（対応していない端末では黙って諦める） */
+var wakeLock=null;
+function keepAwake(on){
+  try{
+    if(on){
+      if(wakeLock||!navigator.wakeLock||!navigator.wakeLock.request) return;
+      navigator.wakeLock.request('screen').then(function(s){
+        wakeLock=s;
+        s.addEventListener('release',function(){ wakeLock=null; });
+      },function(){});
+    }else if(wakeLock){ wakeLock.release(); wakeLock=null; }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){
+    if(G&&ui.screen==='game') keepAwake(true);
+    if(ui.screen==='title') checkUpdate(false);
+  }
+});
+
+/* ---------- 更新 ---------- */
+var lastCheck=0, checking=false;
+function serverVersion(){
+  return new Promise(function(res,rej){
+    if(typeof fetch!=='function'){ rej(); return; }
+    fetch(location.href,{cache:'no-store',credentials:'same-origin'})
+      .then(function(r){ if(!r.ok) throw 0; return r.text(); })
+      .then(function(t){
+        var m=t.match(/name="app-version"\s+content="([^"]+)"/);
+        if(!m) throw 0;
+        res(m[1]);
+      })['catch'](function(){ rej(); });
+  });
+}
+var applyUpdate=function(){ try{ location.reload(); }catch(e){} };
+function showUpdate(v,apply){
+  try{
+    var bar=el('update-bar');
+    if(!bar) return;
+    if(apply) applyUpdate=apply;
+    el('update-txt').innerHTML = v
+      ? ('新しい版'+(/^\d/.test(String(v))?(' <b>'+v+'</b>'):'')+
+         ' があります<small>いま遊んでいるのは '+APP_VERSION+' です</small>')
+      : ('自動確認ができませんでした<small>手動で読み込み直すと最新になります</small>');
+    bar.classList.add('on');
+  }catch(e){}
+}
+function checkUpdate(manual){
+  if(checking) return;
+  var now=Date.now();
+  if(!manual && now-lastCheck < 5*60*1000) return;
+  checking=true; lastCheck=now;
+  if(manual) toast('更新を確認しています…');
+  serverVersion().then(function(v){
+    checking=false;
+    if(v!==APP_VERSION){ showUpdate(v); return; }
+    try{
+      var bar=el('update-bar');
+      if(bar) bar.classList.remove('on');
+      if(manual) toast('最新版です（'+APP_VERSION+'）');
+    }catch(e){}
+  },function(){
+    checking=false;
+    if(manual) showUpdate(null);
+  });
+}
+el('ver-txt').textContent=APP_VERSION;
+el('ver-check').onclick=function(){ checkUpdate(true); };
+el('update-go').onclick=function(){ applyUpdate(); };
+
+/* ---------- ホーム画面への追加案内 ---------- */
+var EMBEDDED=(function(){ try{ return window.top!==window.self; }catch(e){ return true; } })();
+(function(){
+  var standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)
+                 || window.navigator.standalone===true;
+  var ua=navigator.userAgent||'';
+  var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var touch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  var h=el('install-hint');
+  if(standalone){ h.innerHTML='<b>ホーム画面から起動中。</b>全画面で遊べます。'; return; }
+  if(EMBEDDED){
+    /* この頁は別サイトの中に埋め込まれて動いている。
+       ホーム画面に追加しても、記録されるのは外側の頁のほうになる。 */
+    h.innerHTML='<b>この画面は別のサイトの中で動いています。</b>'+
+      'ホーム画面に追加しても外側のアプリとして登録されます。'+
+      '単体のアプリとして入れるには、配布用の <span style="font-family:var(--f-num)">dist</span> を'+
+      '自分のURLに置いてください（README 参照）。';
+    return;
+  }
+  if(!touch){ h.innerHTML='スマホで開くと全画面で遊べます。'; return; }
+  h.innerHTML = ios
+    ? '<b>ホーム画面に追加</b>すると全画面のアプリとして遊べます ── 共有ボタン <span style="font-family:var(--f-num)">↑</span> →「ホーム画面に追加」'
+    : '<b>ホーム画面に追加</b>すると全画面のアプリとして遊べます ── メニュー ⋮ →「ホーム画面に追加」';
+})();
+setTimeout(function(){ checkUpdate(false); },1800);
+
+/* 検証用の覗き窓（tests/ui-smoke.js が使う。通常の遊びには影響しない） */
+window.__ap={ get ui(){return ui;}, get game(){return G;},
+              get version(){return APP_VERSION;}, get embedded(){return EMBEDDED;},
+              checkUpdate:checkUpdate, offerUpdate:showUpdate,
+              sprites:function(){ return bubbleSprites; },
+              bench:function(n){                     /* 描画負荷の実測用 */
+                var t0=performance.now();
+                for(var i=0;i<n;i++) drawBg(1/60);
+                return (performance.now()-t0)/n;
+              } };
+})();
+</script>
