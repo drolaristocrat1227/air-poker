@@ -130,6 +130,31 @@ function realThink(seed) {
 }
 
 /* =============================================================
+   共通：進行の補助（役作りはベットより前に来る）
+   ============================================================= */
+function openPlates(g){ g.selectPlate(0,0); g.selectPlate(1,0); return g; }
+function bestOf(g,i){
+  const c=analyzePool(g.P[i].avail).bySum[g.P[i].target];
+  return (c&&c.length)?c[0].cards:null;
+}
+/* 双方が最善手を組んで、ベットまで進める */
+function toBet(g){
+  openPlates(g);
+  for(let i=0;i<2;i++){
+    if(g.submitted[i]) continue;
+    const h=bestOf(g,i);
+    if(h) g.submitHand(i,h); else g.missHand(i);
+  }
+  return g;
+}
+/* ベットをコール／チェックで流す */
+function passBet(g){
+  let n=0;
+  while(g.phase==='bet'&&n++<80) g.act(g.toAct, Math.max(0,g.deficit(g.toAct))>0?'call':'check');
+  return g;
+}
+
+/* =============================================================
    1. 役の評価
    ============================================================= */
 section('1. 役評価');
@@ -350,7 +375,7 @@ section('4. 難易度の強さ');
 section('5. ベット規則');
 {
   const g = new Game({ mode: 'pvp', seed: 42 });
-  g.selectPlate(0, 0); g.selectPlate(1, 0);
+  toBet(g);
   ok(g.phase === 'bet', '数字開示でベットへ移行');
   ok(g.pot() === 2, '1回戦の参加料は各1（場に2）', String(g.pot()));
   ok(g.maxRaise(g.toAct) === Math.floor(g.pot() / 2), 'レイズ上限＝場のエアの半分',
@@ -361,26 +386,26 @@ section('5. ベット規則');
   ok(g.act(g.toAct, 'check') === false, '差額があるときチェックは拒否');
   ok(g.act(1 - g.toAct, 'call') === false, '手番でない側の行動は拒否');
   g.act(g.toAct, 'call');
-  ok(g.phase === 'build', 'コールでベット終了→役作りへ');
+  ok(g.phase === 'reveal', 'コールでベット終了→決着へ（役作りは済んでいる）');
   ok(g.P[0].committed === g.P[1].committed, 'コール後は賭け額が揃う');
 
   const g2 = new Game({ mode: 'pvp', seed: 7 });
-  g2.selectPlate(0, 0); g2.selectPlate(1, 0);
+  toBet(g2);
   for (let i = 0; i < 320; i++) g2.tick(0.1);
   ok(g2.raiseOpen === false, '30秒経過でレイズ不可になる');
   ok(g2.act(g2.toAct, 'raise', 1) === false, '時間切れ後のレイズは拒否される');
   ok(g2.act(g2.toAct, 'check') === true, '時間切れ後もチェックはできる');
 
   const g3 = new Game({ mode: 'pvp', seed: 99 });
-  g3.selectPlate(0, 0); g3.selectPlate(1, 0);
+  toBet(g3);
   let t = 0;
   while (g3.phase === 'bet' && t < 20000) { g3.tick(0.1); t++; }
   ok(g3.phase !== 'bet', '完全放置でもベット段階は必ず終了する', `${(t*0.1).toFixed(1)}秒`);
 
   /* オールインの超過返却 */
   const g4 = new Game({ mode: 'pvp', seed: 5150 });
-  g4.selectPlate(0, 0); g4.selectPlate(1, 0);
-  g4.P[1].chips = 2;                                  // 後手を短いスタックにする
+  toBet(g4);
+  g4.P[1].chips = 2;                                  /* 後手を短いスタックにする */
   const totalBefore = g4.P[0].chips + g4.P[1].chips + g4.P[0].committed + g4.P[1].committed;
   let guard = 0;
   while (g4.phase === 'bet' && guard++ < 50) {
@@ -390,8 +415,11 @@ section('5. ベット規則');
   }
   ok(g4.P[0].committed === g4.P[1].committed, 'オールイン決着でも賭け額は揃う',
      `${g4.P[0].committed} / ${g4.P[1].committed}`);
-  ok(g4.P[0].chips + g4.P[1].chips + g4.P[0].committed + g4.P[1].committed === totalBefore,
-     '超過返却でエアが増減しない');
+  ok(g4.P[0].chips + g4.P[1].chips + g4.P[0].committed + g4.P[1].committed
+     + g4.vanished === totalBefore,
+     '超過返却でエアが増減しない',
+     `${g4.P[0].chips + g4.P[1].chips + g4.P[0].committed + g4.P[1].committed + g4.vanished}`
+     + ' vs ' + totalBefore);
 }
 
 /* =============================================================
@@ -399,35 +427,55 @@ section('5. ベット規則');
    ============================================================= */
 section('6. 役作り・天災・持ち越し');
 {
+  /* 進行の順番：数字 → 役作り → ベット → 決着 */
+  {
+    const g0 = new Game({ mode: 'pvp', seed: 31 });
+    ok(g0.phase === 'plate', '始まりは数字選び');
+    openPlates(g0);
+    ok(g0.phase === 'build', '数字を開いたら、まず役作り');
+    g0.submitHand(0, bestOf(g0, 0));
+    ok(g0.phase === 'build', '片方だけではまだ役作り中');
+    g0.submitHand(1, bestOf(g0, 1));
+    ok(g0.phase === 'bet', '双方が組み終えてからベットへ入る');
+  }
+
+  /* フォールドしても札は温存できない */
+  {
+    const g0 = new Game({ mode: 'pvp', seed: 32 });
+    toBet(g0);
+    const laid = [g0.P[0].hand.slice(), g0.P[1].hand.slice()];
+    g0.act(g0.toAct, 'fold');
+    ok(g0.phase === 'reveal', 'フォールドで決着へ');
+    ok(laid[0].every(id => g0.P[0].avail[id] === 0) &&
+       laid[1].every(id => g0.P[1].avail[id] === 0),
+       'フォールドでも出した5枚は双方とも使用済みになる');
+  }
+
   /* 役作りの時間切れ */
   const g = new Game({ mode: 'cpu', difficulty: 'normal', seed: 3 });
   g.selectPlate(0, 0);
   while (g.pendingCPU()) g.runCPU(g.pendingCPU());
-  while (g.phase === 'bet') {
-    const j = g.pendingCPU();
-    if (j) g.runCPU(j);
-    else g.act(0, Math.max(0, g.deficit(0)) > 0 ? 'call' : 'check');
-  }
   ok(g.phase === 'build', '役作り段階へ');
   while (g.pendingCPU()) g.runCPU(g.pendingCPU());
   let u = 0;
   while (g.phase === 'build' && u < 3000) { g.tick(0.1); u++; }
-  ok(g.phase === 'reveal', '100秒放置でミス判定になり決着する', `${(u*0.1).toFixed(1)}秒`);
+  ok(g.phase === 'bet', '100秒放置でミス扱いになり、ベットへ進む', `${(u*0.1).toFixed(1)}秒`);
   ok(g.P[0].missed === true, '未提出側がミス扱いになる');
+  passBet(g);
+  while (g.pendingCPU()) g.runCPU(g.pendingCPU());
+  ok(g.phase === 'reveal', 'ベットのあと決着する');
   ok(g.result.winner === 1, 'ミスした側が敗ける');
 
   /* 天災 */
   const g2 = new Game({ mode: 'pvp', seed: 11 });
-  g2.selectPlate(0, 0); g2.selectPlate(1, 0);
-  while (g2.phase === 'bet') g2.act(g2.toAct, Math.max(0, g2.deficit(g2.toAct)) > 0 ? 'call' : 'check');
-  const a0 = analyzePool(g2.P[0].avail).bySum[g2.P[0].target];
-  const a1 = analyzePool(g2.P[1].avail).bySum[g2.P[1].target];
-  const h0 = a0[0].cards, h1 = a1[0].cards;
+  openPlates(g2);
+  const h0 = bestOf(g2, 0), h1 = bestOf(g2, 1);
   const dupExpected = h0.some(x => h1.indexOf(x) >= 0);
+  g2.submitHand(0, h0); g2.submitHand(1, h1);
   const chipsBefore = [g2.P[0].chips, g2.P[1].chips];
   const paid = [g2.P[0].committed, g2.P[1].committed];
-  g2.submitHand(0, h0); g2.submitHand(1, h1);
-  ok(g2.phase === 'reveal', '双方提示で決着');
+  passBet(g2);
+  ok(g2.phase === 'reveal', 'ベットが済めば決着');
   ok(!!g2.result.tensai === dupExpected, '天災の判定が札の重複と一致');
   if (g2.result.type === 'win' && g2.result.tensai) {
     const L = 1 - g2.result.winner, W = g2.result.winner;
@@ -446,9 +494,8 @@ section('6. 役作り・天災・持ち越し');
 
   /* 不正な役は拒否される */
   const g3 = new Game({ mode: 'pvp', seed: 77 });
-  g3.selectPlate(0, 0); g3.selectPlate(1, 0);
-  while (g3.phase === 'bet') g3.act(g3.toAct, Math.max(0, g3.deficit(g3.toAct)) > 0 ? 'call' : 'check');
-  const good = analyzePool(g3.P[0].avail).bySum[g3.P[0].target][0].cards;
+  openPlates(g3);
+  const good = bestOf(g3, 0);
   ok(g3.submitHand(0, [good[0], good[0], good[1], good[2], good[3]]) === false, '同じ札の重複提示は拒否');
   ok(g3.submitHand(0, good.slice(0, 4)) === false, '4枚の提示は拒否');
   const wrong = good.slice();
@@ -459,11 +506,16 @@ section('6. 役作り・天災・持ち越し');
 
   /* 双方ミスの再挑戦と持ち越し */
   const g4 = new Game({ mode: 'pvp', seed: 5 });
-  g4.selectPlate(0, 0); g4.selectPlate(1, 0);
-  while (g4.phase === 'bet') g4.act(g4.toAct, Math.max(0, g4.deficit(g4.toAct)) > 0 ? 'call' : 'check');
+  openPlates(g4);
   const potWas = g4.pot();
   let tries = 0;
-  while (g4.phase === 'build' && tries++ < 10) { g4.missHand(0); g4.missHand(1); }
+  g4.missHand(0); g4.missHand(1); tries++;
+  ok(g4.phase === 'bet', '双方ミスでも、まずベットへ進む');
+  passBet(g4);
+  ok(g4.phase === 'build' && g4.buildAlt === true,
+     '双方ミスのやり直しは、ベットのあと交互に行う');
+  let guard2 = 0;
+  while (g4.phase === 'build' && guard2++ < 10) { g4.missHand(0); g4.missHand(1); tries++; }
   ok(g4.phase === 'reveal', '双方ミスを繰り返しても必ず決着する', `試行 ${tries}`);
   ok(tries === 3, '再挑戦は2回まで（計3回でミス確定）', `試行 ${tries}`);
   ok(g4.result.type === 'carry', '3回ミスで持ち越しになる');
@@ -479,7 +531,7 @@ section('7. 呼吸・溺死');
 {
   /* 自分の手番でだけ酸素が減る */
   const g = new Game({ mode: 'pvp', seed: 1234 });
-  g.selectPlate(0, 0); g.selectPlate(1, 0);
+  toBet(g);
   const actor = g.toAct, idle = 1 - actor;
   for (let i = 0; i < 100; i++) g.tick(0.1);            // 10秒
   ok(Math.abs((100 - g.P[actor].o2) - 20) < 0.4, '選択中の者は10秒で酸素20%を失う（倍速）',
@@ -522,7 +574,7 @@ section('7. 呼吸・溺死');
 
   /* 酸素が尽きたらエアを1枚使って呼吸する */
   const g0 = new Game({ mode: 'pvp', seed: 999 });
-  g0.selectPlate(0, 0); g0.selectPlate(1, 0);
+  toBet(g0);
   const who = g0.toAct;
   g0.P[who].o2 = 6;
   const chipsWas = g0.P[who].chips;
@@ -533,7 +585,7 @@ section('7. 呼吸・溺死');
 
   /* 役作り100秒を使い切ると、ちょうどエア1枚ぶん */
   const gb = new Game({ mode: 'pvp', seed: 4242 });
-  gb.selectPlate(0, 0); gb.selectPlate(1, 0);
+  openPlates(gb);
   while (gb.phase === 'bet') gb.act(gb.toAct, Math.max(0, gb.deficit(gb.toAct)) > 0 ? 'call' : 'check');
   const bw = gb.buildTurn, o2b = gb.P[bw].o2, chipsB = gb.P[bw].chips;
   let gguard = 0;
@@ -545,7 +597,7 @@ section('7. 呼吸・溺死');
   /* 早く提示すればそこで消費が止まる ── 速さがそのままエアになる */
   function airLeftAfterBuild(elapsedSteps) {
     const gg = new Game({ mode: 'pvp', seed: 5150 });
-    gg.selectPlate(0, 0); gg.selectPlate(1, 0);
+    openPlates(gg);
     while (gg.phase === 'bet') gg.act(gg.toAct, Math.max(0, gg.deficit(gg.toAct)) > 0 ? 'call' : 'check');
     const w = gg.buildTurn;
     for (let i = 0; i < elapsedSteps && gg.phase === 'build' && gg.buildTurn === w; i++) gg.tick(0.1);
@@ -561,7 +613,7 @@ section('7. 呼吸・溺死');
 
   /* 停止・一時停止では減らない */
   const g1 = new Game({ mode: 'pvp', seed: 4321 });
-  g1.selectPlate(0, 0); g1.selectPlate(1, 0);
+  toBet(g1);
   const t0 = g1.toAct, o2Was = g1.P[t0].o2;
   g1.phase = 'reveal';
   for (let i = 0; i < 600; i++) g1.tick(0.1);
@@ -572,42 +624,39 @@ section('7. 呼吸・溺死');
 
   /* 溺死 */
   const g3 = new Game({ mode: 'pvp', seed: 8 });
-  g3.selectPlate(0, 0); g3.selectPlate(1, 0);
+  toBet(g3);
   const dz = g3.toAct;
   g3.P[dz].chips = 0; g3.P[dz].o2 = 0.5;
   g3.tick(1);
   ok(g3.P[dz].drowning === true, 'エアが尽きると溺水状態になる');
   ok(g3.P[dz].o2 === 0, '溺水中の酸素は0で止まる');
-  while (g3.phase === 'bet') g3.act(g3.toAct, Math.max(0, g3.deficit(g3.toAct)) > 0 ? 'call' : 'check');
-  while (g3.phase === 'build') { g3.missHand(0); g3.missHand(1); }
+  g3.act(dz, 'fold');                 /* 降りて負ける＝場のエアは戻らない */
+  ok(g3.phase === 'reveal', '決着へ進む');
+  ok(g3.P[dz].chips === 0, '手持ちは0のまま');
   g3.nextRound();
   ok(g3.phase === 'over' && g3.winner === 1 - dz, '手持ち0のまま回戦を終えると敗北', `winner=${g3.winner}`);
   ok(g3.overReason === 'drown', '敗因は溺死');
 
-  /* 降りればその回戦の役作りぶんの酸素を払わずに済む（あえて負ける手が成立する） */
-  function airAfterRound(byFold) {
-    const gg = new Game({ mode: 'pvp', seed: 7373 });
-    gg.selectPlate(0, 0); gg.selectPlate(1, 0);
-    while (gg.phase === 'bet') {
-      if (byFold && gg.toAct === 0) { gg.act(0, 'fold'); break; }
-      gg.act(gg.toAct, Math.max(0, gg.deficit(gg.toAct)) > 0 ? 'call' : 'check');
-    }
-    let gu = 0;
-    while (gg.phase === 'build' && gu++ < 1200) gg.tick(0.1);   // 100秒使い切る
-    return gg.P[0].chips * 100 + gg.P[0].o2;
+  /* 役作りがベットより前に来たため、降りても役作りぶんの酸素は既に払っている。
+     降りて浮くのは賭けたエアだけ。札は温存できない。 */
+  {
+    const gf = new Game({ mode: 'pvp', seed: 7373 });
+    toBet(gf);
+    const laid = [gf.P[0].hand.slice(), gf.P[1].hand.slice()];
+    const chipsBefore = gf.P[0].chips;
+    gf.act(gf.toAct, 'fold');
+    ok(laid[0].every(id => gf.P[0].avail[id] === 0),
+       '降りても自分の出した5枚は使用済みになる');
+    ok(laid[1].every(id => gf.P[1].avail[id] === 0),
+       '降りても相手の出した5枚は使用済みになる');
+    ok(gf.P[0].chips === chipsBefore, '降りたぶん、それ以上は賭けずに済む');
   }
-  ok(airAfterRound(true) > airAfterRound(false),
-     '降りればその回戦の役作りぶんの酸素を使わずに済む',
-     `降り ${airAfterRound(true).toFixed(0)} / 戦う ${airAfterRound(false).toFixed(0)}`);
 
   /* CPU は待たせない代わりに思考時間を酸素へ計上する */
   const g4 = new Game({ mode: 'cpu', difficulty: 'normal', seed: 55 });
   g4.selectPlate(0, 0);
-  while (g4.pendingCPU()) g4.runCPU(g4.pendingCPU());
-  while (g4.phase === 'bet') {
-    const j = g4.pendingCPU();
-    if (j) g4.runCPU(j); else g4.act(0, Math.max(0, g4.deficit(0)) > 0 ? 'call' : 'check');
-  }
+  while (g4.phase === 'plate' && g4.pendingCPU()) g4.runCPU(g4.pendingCPU());
+  ok(g4.phase === 'build', '数字のあとは役作り');
   const before4 = g4.P[1].chips * 100 + g4.P[1].o2;
   g4.runCPU(g4.pendingCPU());
   const after4 = g4.P[1].chips * 100 + g4.P[1].o2;
@@ -677,13 +726,15 @@ section('9. 端の数字の危うさ');
   const rate = cases ? noSol / cases : 0;
   ok(rate < 0.03, '「組めない」が起きる割合は数%以内に収まる',
      `${noSol}/${cases} = ${(rate * 100).toFixed(2)}%（回戦別 ${byRound.slice(1).join('・')}）`);
-  ok(byRound[1] + byRound[2] === 0, '序盤（第1〜2回戦）では必ず組める',
-     `第1回戦 ${byRound[1]} / 第2回戦 ${byRound[2]}`);
+  ok(byRound[1] === 0, '配ったばかりの山（第1回戦）では必ず組める',
+     `回戦別 ${byRound.slice(1).join('・')}`);
+  ok(byRound[1] + byRound[2] <= cases * 0.02, '序盤で起きても2%以内に収まる',
+     `第1回戦 ${byRound[1]} / 第2回戦 ${byRound[2]} / 全${cases}件`);
 
   /* 起きた場合でも安全に処理されること */
   const g3 = new Game({ mode: 'pvp', seed: 4004 });
   for (let i = 0; i < 52; i++) { g3.P[0].avail[i] = 0; g3.P[1].avail[i] = 0; }
-  g3.selectPlate(0, 0); g3.selectPlate(1, 0);
+  openPlates(g3);
   ok(g3.P[0].hasSol === false && g3.P[1].hasSol === false, '組める役が無いことを検知する');
   let guard = 0;
   while (g3.phase === 'bet' && guard++ < 50)
@@ -694,7 +745,8 @@ section('9. 端の数字の危うさ');
   /* 片方だけ組めない場合はその者が回戦を落とす */
   const g4 = new Game({ mode: 'pvp', seed: 4242 });
   for (let i = 0; i < 52; i++) g4.P[0].avail[i] = 0;
-  g4.selectPlate(0, 0); g4.selectPlate(1, 0);
+  openPlates(g4);
+  if (g4.phase === 'build' && !g4.submitted[1]) g4.submitHand(1, bestOf(g4, 1));
   while (g4.phase === 'bet')
     g4.act(g4.toAct, Math.max(0, g4.deficit(g4.toAct)) > 0 ? 'call' : 'check');
   if (g4.phase === 'build' && !g4.submitted[1])

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="1.10.1">
+<meta name="app-version" content="1.11.0">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#04141a">
 <title>エア・ポーカー</title>
@@ -211,6 +211,13 @@ h1.tt{font-family:var(--f-disp);font-weight:800;font-size:clamp(30px,10.4vw,54px
 .clock .t{font-family:var(--f-num);font-size:14px;font-variant-numeric:tabular-nums;min-width:50px;
   text-align:right}
 .clock.warn .t{color:var(--blood)}
+.myhand{display:grid;grid-template-columns:auto repeat(5,minmax(0,26px));gap:5px;
+  align-items:center;border:1px solid var(--line);border-radius:3px;padding:7px 9px;
+  background:rgba(10,38,45,.6)}
+.myhand .lab{font-family:var(--f-num);font-size:9px;letter-spacing:.14em;color:var(--dim)}
+.myhand .nm{grid-column:1/-1;font-family:var(--f-disp);font-size:13px;color:var(--verd);
+  text-align:center;margin-top:2px}
+.myhand .nm.miss{color:var(--blood)}
 .raisebox{border:1px solid var(--line);border-radius:3px;padding:10px 12px 12px;display:none;
   flex-direction:column;gap:9px;background:rgba(10,38,45,.6)}
 .raisebox.on{display:flex}
@@ -277,14 +284,19 @@ details.info .body b{color:var(--bone);font-weight:500}
 .usedline .r{color:#d97a72}
 
 /* 結果 */
+#panel-reveal{gap:9px;flex:1;justify-content:center}
+#panel-reveal .sd{padding:8px 10px}
+#panel-reveal .verdict{font-size:21px;padding:0}
 .sd{border:1px solid var(--line);border-radius:3px;padding:10px 11px;background:rgba(10,38,45,.6)}
 .sd.win{border-color:var(--brass);box-shadow:0 0 18px rgba(224,167,66,.13)}
 .sd.lose{opacity:.7}
-.sd .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.sd .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
 .sd .nm{font-family:var(--f-disp);font-size:14px;font-weight:700}
 .sd .hn{font-family:var(--f-disp);font-size:14px;color:var(--verd);text-align:right}
 .sd .hn.miss{color:var(--blood)}
-.sd .cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;max-width:240px}
+.sd .row{display:flex;align-items:center;gap:10px}
+.sd .cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;max-width:196px;flex:0 0 auto}
+.sd .secs{font-family:var(--f-num);font-size:11px;color:var(--dim);letter-spacing:.06em}
 .mini{aspect-ratio:5/7;border-radius:2px;background:linear-gradient(170deg,#f4f7f5,#cfdad6);
   color:#12262a;display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:var(--f-num);line-height:1}
@@ -298,8 +310,9 @@ details.info .body b{color:var(--bone);font-weight:500}
 .verdict.d{color:var(--muted)}
 .tensai{border:1px solid var(--blood);background:linear-gradient(180deg,rgba(90,25,20,.55),rgba(30,8,6,.5));
   border-radius:3px;padding:10px 12px;text-align:center}
-.tensai .t{font-family:var(--f-disp);font-size:19px;font-weight:800;color:#f0837a;letter-spacing:.1em}
-.tensai .d{font-size:12px;color:#e3b3ae;margin-top:3px;line-height:1.7}
+.tensai{padding:7px 10px}
+.tensai .t{font-family:var(--f-disp);font-size:17px;font-weight:800;color:#f0837a;letter-spacing:.1em}
+.tensai .d{font-size:11.5px;color:#e3b3ae;margin-top:2px;line-height:1.55}
 .pain{border:1px dashed var(--blood-d);border-radius:3px;padding:9px 11px;text-align:center;
   font-size:12px;color:#b0837e;line-height:1.7}
 .pain b{font-family:var(--f-disp);font-size:15px;color:#e08c84;font-weight:700;letter-spacing:.06em}
@@ -396,6 +409,13 @@ details.info .body b{color:var(--bone);font-weight:500}
 .toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001s!important;transition-duration:.001s!important}
+}
+@media (max-height:700px){
+  #panel-reveal .verdict{font-size:18px}
+  #panel-reveal .sd{padding:6px 9px}
+  #panel-reveal .sd .cards{max-width:170px}
+  #panel-reveal #rv-next{padding:9px 12px}
+  #panel-reveal{gap:7px}
 }
 @media (max-height:660px){
   .tgt .num{font-size:28px}
@@ -503,6 +523,7 @@ details.info .body b{color:var(--bone);font-weight:500}
     <h3>1階 ─ 数字とベット</h3>
     <ul>
       <li>各自に<b>5枚の金属板</b>が配られる。刻まれているのは数字だけ。毎回戦1枚ずつ、<b>30秒以内</b>に場にオープンする。時間が来れば1枚が勝手に押し出される。</li>
+      <li>数字を開いたら<b>先に役を組み</b>、そのうえでベットに入る。<b>降りても出した5枚は戻らない</b>。</li>
       <li>数字は <b>6〜64</b> の全域から無作為に配られる。端に寄った数字ほど組める役は限られ、札が減れば<b>組めなくなる</b>。どの順で切るかが勝負を決める。</li>
       <li>参加料は1回戦目が<b>1エア</b>、以降1エアずつ増える（1・2・3・4・5）。</li>
       <li>ベットタイムは<b>30秒</b>。一度にレイズできる枚数は<b>場のエア総数の半分</b>まで。時間が来たらそれ以上レイズできない。</li>
@@ -514,7 +535,7 @@ details.info .body b{color:var(--bone);font-weight:500}
       <li>制限時間は<b>100秒</b>。作った役の強弱で勝敗が決まる。</li>
       <li>A=1、J=11、Q=12、K=13として合計する。役の強さは通常のポーカーに準じ、A は最強のランクとして扱う。</li>
       <li>一度使った札はその後の勝負で使えない。回を重ねるごとに選択肢は枯れていく。</li>
-      <li><b>ミス</b>＝100秒超過／合計数の不一致／使用済み札の再使用。ミスした側はその回戦を落とす。双方ミスなら再度100秒が与えられる。</li>
+      <li><b>ミス</b>＝100秒超過／合計数の不一致／使用済み札の再使用。ミスした側はその回戦を落とす。双方ミスなら、<b>ベットのあと交互に</b>もう一度100秒が与えられる。</li>
     </ul>
 
     <h3>天災</h3>
@@ -605,6 +626,7 @@ details.info .body b{color:var(--bone);font-weight:500}
           <div class="bar"><i id="bet-clock-bar"></i></div>
           <span class="t" id="bet-clock-t">30.0</span>
         </div>
+        <div class="myhand" id="bet-hand"></div>
         <h3 class="ptitle" id="bet-turn">あなたの手番</h3>
         <div class="raisebox" id="raisebox">
           <div class="rv"><span>レイズ額（上限 <span id="rz-max">0</span>）</span><b id="rz-val">1</b></div>
@@ -658,9 +680,6 @@ details.info .body b{color:var(--bone);font-weight:500}
         <div id="rv-tensai"></div>
         <div class="sd" id="rv-a"></div>
         <div class="sd" id="rv-b"></div>
-        <div class="pain" id="rv-pain"></div>
-        <div class="skiphint" id="rv-skip">画面に触れると最後まで進みます</div>
-        <div class="log" id="rv-log"></div>
         <button class="btn pri" id="rv-next">次へ</button>
       </div>
 
@@ -944,8 +963,10 @@ function cpuPlanHand(g,pi){
 
 function cpuWinProb(g,pi){
   var me=g.P[pi], opp=g.P[1-pi], D=DIFF[g.diff];
-  if(!me.plan) return 0.03;
-  var myKey=evalCards(me.plan).key;
+  var mine=me.hand||me.plan;          /* ベットの時点では既に組み終えている */
+  if(!mine) return 0.03;
+  if(me.missed&&!me.hand) return 0.03;
+  var myKey=evalCards(mine).key;
   var oc=analyzePool(opp.avail).bySum[opp.target]||[];
   if(!oc.length) return 0.97;
   var tot=0,acc=0;
@@ -1041,7 +1062,7 @@ function Game(opt){
       plates:plates[i], plateUsed:[false,false,false,false,false],
       avail:new Uint8Array(52).fill(1),
       committed:0, folded:false, allIn:false,
-      target:0, hasSol:false, plan:null, hand:null, missed:false, missReason:'',
+      target:0, hasSol:false, plan:null, hand:null, laid:null, missed:false, missReason:'',
       dead:false, drowning:false
     });
   }
@@ -1109,13 +1130,13 @@ Game.prototype.startRound=function(){
   for(i=0;i<2;i++){
     var p=this.P[i];
     p.committed=0; p.folded=false; p.allIn=false;
-    p.target=0; p.hasSol=false; p.plan=null; p.hand=null; p.missed=false;
+    p.target=0; p.hasSol=false; p.plan=null; p.hand=null; p.laid=null; p.missed=false;
     p.missReason=''; p.drowning=false;
     var pay=Math.min(p.chips,ante);
     p.chips-=pay; p.committed=pay;
     if(p.chips===0) p.allIn=true;
   }
-  this.ante=ante; this.attempt=1; this.result=null;
+  this.ante=ante; this.attempt=1; this.result=null; this.postBet=false; this.buildAlt=false;
   this.plateSel=[null,null];
   this.plateClock=[PLATE_TIME,PLATE_TIME];
   this.submitted=[false,false];
@@ -1146,7 +1167,10 @@ Game.prototype.revealPlates=function(){
   this.pushLog('sys','数字がオープンされた ─ '+this.P[0].name+' '+this.P[0].target+
                      ' / '+this.P[1].name+' '+this.P[1].target);
   for(i=0;i<2;i++) if(this.P[i].isCPU) this.P[i].plan=cpuPlanHand(this,i);
-  this.beginBetting();
+  /* 役作りを先に済ませてからベットへ入る。
+     こうしないと、フォールドで札を温存できてしまう。 */
+  this.postBet=false;
+  this.beginBuild(false);
 };
 
 Game.prototype.beginBetting=function(){
@@ -1207,11 +1231,30 @@ Game.prototype.endBetting=function(){
            this.pushLog('sys','超過分 '+d+' を返却'); }
   else if(d<0){ this.P[1].committed+=d; this.P[1].chips-=d; if(this.P[1].chips>0)this.P[1].allIn=false;
            this.pushLog('sys','超過分 '+(-d)+' を返却'); }
-  this.beginBuild();
+  this.afterBetting();
 };
 
-Game.prototype.beginBuild=function(){
+/* ベットが済んだあと。双方が組めていなければ、ここで交互にやり直す。 */
+Game.prototype.afterBetting=function(){
+  var A=this.P[0], B=this.P[1];
+  var m0=(A.missed||!A.hand), m1=(B.missed||!B.hand);
+  if(m0&&m1){
+    if((!A.hasSol&&!B.hasSol)||this.attempt>=MAX_ATTEMPT){
+      this.finishRound({});
+      return;
+    }
+    this.attempt++;
+    this.pushLog('sys','双方ミス ─ 交互に組み直す（'+this.attempt+'回目）');
+    this.postBet=true;
+    this.beginBuild(true);
+    return;
+  }
+  this.finishRound({});
+};
+
+Game.prototype.beginBuild=function(alt){
   this.phase='build';
+  this.buildAlt=!!alt;      /* 交互に組む（双方ミスのやり直し） */
   this.buildClock=[BUILD_TIME,BUILD_TIME];
   this.submitted=[false,false];
   this.buildTurn=0;
@@ -1227,7 +1270,7 @@ Game.prototype.beginBuild=function(){
   this.checkBuildDone();
 };
 Game.prototype.advanceBuildTurn=function(){
-  if(this.mode!=='pvp') return;
+  if(this.mode!=='pvp'&&!this.buildAlt) return;
   if(this.submitted[this.buildTurn]){
     var o=1-this.buildTurn;
     if(!this.submitted[o]) this.buildTurn=o;
@@ -1269,6 +1312,7 @@ Game.prototype.submitHand=function(pi,cards){
 
   var p=this.P[pi];
   p.lastBuild=BUILD_TIME-Math.max(0,this.buildClock[pi]);
+  p.laid=cards.slice();
   this.submitted[pi]=true;
   if(fault){
     p.hand=null; p.missed=true; p.missReason=fault;
@@ -1293,7 +1337,9 @@ Game.prototype.missHand=function(pi,reason){
   return true;
 };
 Game.prototype.checkBuildDone=function(){
-  if(this.submitted[0]&&this.submitted[1]) this.finishRound({});
+  if(!(this.submitted[0]&&this.submitted[1])) return;
+  if(this.postBet) this.afterBetting();
+  else this.beginBetting();
 };
 
 Game.prototype.finishRound=function(info){
@@ -1306,25 +1352,12 @@ Game.prototype.finishRound=function(info){
   }else{
     var m0=(A.missed||!A.hand), m1=(B.missed||!B.hand);
     if(m0&&m1){
-      if((!A.hasSol&&!B.hasSol) || this.attempt>=MAX_ATTEMPT){
-        this.carry=potTotal; A.committed=0; B.committed=0;
-        this.result={type:'carry',pot:potTotal};
-        this.pushLog('sys','双方ミス ─ 場の '+potTotal+' エアは次回戦へ持ち越し');
-        this.phase='reveal';
-        return;
-      }
-      this.attempt++;
-      this.pushLog('sys','双方ミス ─ 再度100秒が与えられる（'+this.attempt+'回目）');
-      this.buildClock=[BUILD_TIME,BUILD_TIME];
-      this.submitted=[false,false];
-      this.buildTurn=0;
-      for(var i=0;i<2;i++){
-        var p=this.P[i]; p.hand=null; p.missed=false; p.missReason='';
-        if(!p.hasSol&&!this.blind){ this.submitted[i]=true; p.missed=true;
-                                    p.missReason='組める役が無い'; }
-      }
-      this.advanceBuildTurn();
-      this.phase='build';
+      /* やり直しの判断は afterBetting が済ませている。ここへ来たら持ち越し。 */
+      this.carry=potTotal; A.committed=0; B.committed=0;
+      this.markUsed();
+      this.result={type:'carry',pot:potTotal};
+      this.pushLog('sys','双方ミス ─ 場の '+potTotal+' エアは次回戦へ持ち越し');
+      this.phase='reveal';
       return;
     }
     if(m0) winner=1;
@@ -1358,11 +1391,18 @@ Game.prototype.finishRound=function(info){
     this.pushLog('sys',W.name+' が '+potTotal+' エアを獲得'+
                  (tensai?('／天災で '+extra+' エアが水中へ消えた'):''));
   }
-  for(var q=0;q<2;q++){
-    var pp=this.P[q];
-    if(pp.hand) for(var z=0;z<5;z++) pp.avail[pp.hand[z]]=0;
-  }
+  this.markUsed();
   this.phase='reveal';
+};
+
+/* 場に出した5枚は二度と使えない。フォールドでも同じ。
+   合計を間違えた5枚も、卓に出た以上は戻らない。 */
+Game.prototype.markUsed=function(){
+  for(var q=0;q<2;q++){
+    var pp=this.P[q], cards=pp.hand||pp.laid;
+    if(!cards) continue;
+    for(var z=0;z<cards.length;z++) pp.avail[cards[z]]=0;
+  }
 };
 
 Game.prototype.nextRound=function(){
@@ -1390,7 +1430,7 @@ Game.prototype.plateTurn=function(){ return this.plateSel[0]===null?0:1; };
 Game.prototype.onStage=function(i){
   if(this.phase==='plate') return this.mode!=='pvp'||this.plateTurn()===i;
   if(this.phase==='bet')   return true;                     /* ベットは公開の場 */
-  if(this.phase==='build') return this.mode!=='pvp'||this.buildTurn===i;
+  if(this.phase==='build') return (this.mode!=='pvp'&&!this.buildAlt)||this.buildTurn===i;
   return false;
 };
 /* 自分の選択がまだ済んでいない＝考えている状態。ここだけ消費が倍になる。 */
@@ -1461,7 +1501,7 @@ Game.prototype.tick=function(dt){
   for(i=0;i<2;i++){
     if(this.submitted[i]) continue;
     if(this.P[i].isCPU) continue;          /* CPU は提示時に一括計上する */
-    if(this.mode==='pvp'&&i!==this.buildTurn) continue;
+    if((this.mode==='pvp'||this.buildAlt)&&i!==this.buildTurn) continue;
     this.buildClock[i]-=dt;
     if(this.buildClock[i]<=0){
       this.buildClock[i]=0;
@@ -2223,6 +2263,7 @@ function showPlate(pi){
 function showBet(pi){
   panel('bet');
   ui.logLen=-1;
+  paintMyHand();
   var me=G.P[pi], isCpu=me.isCPU, d=Math.max(0,G.deficit(pi));
   var v=ui.viewer, o=1-v;
   el('bet-n1').textContent=G.P[v].name;
@@ -2274,6 +2315,23 @@ el('rz-range').addEventListener('input',function(){ el('rz-val').textContent=thi
 })();
 
 /* ---------- 役作り ---------- */
+/* ベット中に自分が出した5枚を見せる。役作りは済んでいるので隠す理由が無い。 */
+function paintMyHand(){
+  var box=el('bet-hand'), p=G.P[ui.viewer], cards=p.hand||p.laid;
+  if(!cards){ box.innerHTML='<span class="lab">HAND</span>'+
+      '<span class="nm miss" style="grid-column:2/-1;margin:0;text-align:left">組めなかった</span>'; return; }
+  var s='<span class="lab">HAND</span>';
+  for(var i=0;i<5;i++){
+    var id=cards[i];
+    s+='<div class="mini'+(A.isRed(id)?' red':'')+'"><span class="r">'+
+       A.RANK_CH[A.cRank(id)]+'</span><span class="s">'+A.SUIT_CH[A.cSuit(id)]+'</span></div>';
+  }
+  var bad=(!p.hand);
+  s+='<div class="nm'+(bad?' miss':'')+'">'+
+     (bad?'合計が合っていない':A.evalCards(cards).name)+'</div>';
+  box.innerHTML=s;
+}
+
 function showBuild(pi){
   if(ui.panel==='build'&&ui.buildFor===pi&&ui.buildAttempt===G.attempt) return;
   panel('build');
@@ -2414,25 +2472,24 @@ el('bd-hint').onclick=function(){
 };
 
 /* ---------- 結果 ---------- */
-var PAINS=['八つ裂き','火あぶり','串刺し','銃殺','水責め'];
 function handBlock(p,dup){
   var s='<div class="hd"><span class="nm">'+p.name+'</span><span class="hn'+
         (p.hand?'':' miss')+'">'+
         (p.folded?'フォールド':(p.hand?A.evalCards(p.hand).name:'ミス'))+'</span></div>';
-  if(p.hand){
-    s+='<div class="cards">';
-    for(var i=0;i<5;i++){
-      var id=p.hand[i];
+  var cards=p.hand||p.laid;
+  if(cards){
+    s+='<div class="row"><div class="cards">';
+    for(var i=0;i<cards.length;i++){
+      var id=cards[i];
       s+='<div class="mini'+(A.isRed(id)?' red':'')+(dup&&dup.indexOf(id)>=0?' dup':'')+'">'+
          '<span class="r">'+A.RANK_CH[A.cRank(id)]+'</span>'+
          '<span class="s">'+A.SUIT_CH[A.cSuit(id)]+'</span></div>';
     }
-    s+='</div>';
+    s+='</div><span class="secs">'+Math.round(p.lastBuild)+'s'+
+       (p.folded?' ／ 降りた':(p.hand?'':' ／ '+(p.missReason||'ミス')))+'</span></div>';
   }else{
     s+='<div class="note">'+(p.folded?'この回戦を降りた':('ミス ── '+(p.missReason||'時間切れ')))+'</div>';
   }
-  if(!p.folded) s+='<div class="note" style="margin-top:5px;font-size:11px">役作りに '+
-                   Math.round(p.lastBuild)+' 秒</div>';
   return s;
 }
 function showReveal(){
@@ -2470,15 +2527,6 @@ function showReveal(){
   el('rv-b').className='sd'+(r&&r.type==='win'?(r.winner===1?' win':' lose'):'');
   el('rv-a').innerHTML=handBlock(G.P[0],dup);
   el('rv-b').innerHTML=handBlock(G.P[1],dup);
-
-  var pain=el('rv-pain');
-  if(r&&r.type==='win'){
-    var loser=G.P[1-r.winner];
-    var pk=PAINS[(G.round*3+G.seed)%PAINS.length];
-    pain.innerHTML='2階のペナルティ ── <b>'+pk+'</b><br>'+
-      loser.name+' 側の役作り担当がビッチ・ペインを受ける。体は傷つかない。痛みだけが残る。';
-    pain.style.display='';
-  }else pain.style.display='none';
 
   el('rv-next').textContent=(G.round>=A.MAX_ROUNDS)?'決着を見る':'第'+(G.round+1)+'回戦へ';
 
@@ -2625,8 +2673,6 @@ function render(){
     el('bd-opp').textContent = G.submitted[1-bi]
       ? (ob.name+' は '+Math.round(ob.lastBuild)+' 秒で手を決めた')
       : (ob.name+' はまだ組んでいる');
-  }else if(ui.panel==='reveal'){
-    renderLog(el('rv-log'));
   }
 }
 function setTarget(idNum,p){
