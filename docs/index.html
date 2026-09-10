@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="1.9.0">
+<meta name="app-version" content="1.10.1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#04141a">
 <title>エア・ポーカー</title>
@@ -51,7 +51,7 @@ body{
 button{font-family:inherit;color:inherit;cursor:pointer}
 button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--verd);outline-offset:2px}
 
-#bg{position:fixed;inset:0;z-index:0;display:block}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 #veil{position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(120% 88% at 50% 42%,
     rgba(0,0,0,0) 32%, rgba(0,0,0,.30) 62%, rgba(0,0,0,.80) 100%)}
@@ -84,6 +84,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--verd);outl
 .btn.pri{border-color:var(--brass-d);background:linear-gradient(180deg,#3a2e14,#241c0c);color:var(--brass)}
 .btn.dgr{border-color:#6d2822;background:linear-gradient(180deg,#33130f,#200b09);color:#e08c84}
 .btn.gho{background:transparent;border-color:var(--dim);color:var(--muted)}
+
 
 /* ---------- タイトル ---------- */
 #s-title{justify-content:flex-start;padding:24px 22px;gap:24px;overflow-y:auto}
@@ -344,6 +345,50 @@ details.info .body b{color:var(--bone);font-weight:500}
 .update .t small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
 .update button{border:1px solid var(--brass-d);border-radius:3px;padding:9px 14px;
   background:linear-gradient(180deg,#4a3a18,#2c220e);color:var(--brass);font-size:13px;font-weight:500}
+/* ---------- 押下の手応え ---------- */
+.btn:active:not([disabled]){transform:translateY(1px) scale(.99);filter:brightness(1.14)}
+.mrow:active{transform:scale(.995);filter:brightness(1.10)}
+.pbtn:not([disabled]):active{transform:scale(.955);filter:brightness(1.18)}
+.appbar button:active,.mute:active{transform:scale(.95);filter:brightness(1.2)}
+.cel{transition:transform .08s,background .1s,box-shadow .1s,color .1s}
+.cel:not([disabled]):active{transform:scale(.86)}
+.cel.sel{animation:cellpop .19s ease-out}
+@keyframes cellpop{0%{transform:scale(.78)}58%{transform:scale(1.14)}100%{transform:scale(1)}}
+.slot.f{animation:slotin .24s cubic-bezier(.2,.9,.3,1.35)}
+@keyframes slotin{0%{transform:translateY(7px) scale(.82);opacity:0}100%{transform:none;opacity:1}}
+
+/* ---------- 決着の段取り ---------- */
+#panel-reveal .sd .hn{opacity:0;transform:translateY(5px)}
+#panel-reveal.s1 .sd .hn{opacity:1;transform:none;transition:opacity .38s,transform .38s}
+#panel-reveal .verdict{opacity:0;transform:scale(.80)}
+#panel-reveal.s2 .verdict{opacity:1;transform:none;
+  transition:opacity .28s,transform .40s cubic-bezier(.2,1.35,.3,1)}
+#panel-reveal #rv-tensai{opacity:0}
+#panel-reveal.s3 #rv-tensai{opacity:1;transition:opacity .22s;animation:slam .55s ease-out}
+@keyframes slam{0%{transform:scale(1.5) rotate(-1.5deg);filter:brightness(2.2)}
+  22%{transform:scale(.97) rotate(.6deg)}45%{transform:scale(1.02) rotate(-.4deg)}
+  100%{transform:none;filter:none}}
+#panel-reveal.s3 .mini.dup{animation:dupflash 1.0s ease-out 2}
+@keyframes dupflash{0%,100%{box-shadow:0 0 0 2px var(--blood)}
+  50%{box-shadow:0 0 0 3px #ff8a7e,0 0 16px rgba(255,120,105,.9)}}
+#panel-reveal #rv-pain,#panel-reveal #rv-next{opacity:0;pointer-events:none}
+#panel-reveal.s5 #rv-pain,#panel-reveal.s5 #rv-next{opacity:1;pointer-events:auto;
+  transition:opacity .32s}
+.skiphint{text-align:center;font-size:11px;color:var(--dim);letter-spacing:.04em}
+#panel-reveal.s5 .skiphint{visibility:hidden}
+
+/* ---------- 飛ぶエア ---------- */
+#fx{position:fixed;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+#fx .chip{position:absolute;width:13px;height:13px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#f6d691,#cd9027 60%,#7a5412);
+  box-shadow:0 0 9px rgba(224,167,66,.7);will-change:transform,opacity}
+
+/* ---------- 消音 ---------- */
+.mute{border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:3px;padding:3px 8px;font-size:12px;line-height:1.3;font-family:var(--f-num);
+  letter-spacing:.06em}
+.mute.off{color:var(--dim);opacity:.7}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:20;
   background:rgba(4,20,26,.96);border:1px solid var(--brass-d);color:var(--brass);
   padding:9px 16px;border-radius:3px;font-size:13px;pointer-events:none;opacity:0;
@@ -424,6 +469,8 @@ details.info .body b{color:var(--bone);font-weight:500}
 
     <div class="appbar">
       <span class="ver">VERSION <b id="ver-txt">1.6.0</b></span>
+      <button id="snd-toggle">音 オン</button>
+      <button id="hap-toggle">振動 オン</button>
       <button id="ver-check">更新を確認</button>
       <span class="install" id="install-hint"></span>
       <span class="legal">非公式・非営利のファン制作です。『嘘喰い』（迫稔雄／集英社）の作中ゲームを
@@ -515,7 +562,8 @@ details.info .body b{color:var(--bone);font-weight:500}
     <div class="field" id="field">
       <div class="fhead">
         <div class="rd">第 <b id="f-round">1</b> 回戦<span style="color:var(--dim);font-size:11px;margin-left:8px">参加料 <span id="f-ante">1</span></span></div>
-        <div class="pot">POT <b id="f-pot">0</b></div>
+        <div class="pot">POT <b id="f-pot">0</b>
+          <button class="mute" id="mute-g" aria-label="音の切替">♪</button></div>
       </div>
       <div class="targets">
         <div class="tgt opp"><span class="cap" id="t-opp-cap">OPPONENT</span><span class="num q" id="t-opp">??</span></div>
@@ -611,6 +659,7 @@ details.info .body b{color:var(--bone);font-weight:500}
         <div class="sd" id="rv-a"></div>
         <div class="sd" id="rv-b"></div>
         <div class="pain" id="rv-pain"></div>
+        <div class="skiphint" id="rv-skip">画面に触れると最後まで進みます</div>
         <div class="log" id="rv-log"></div>
         <button class="btn pri" id="rv-next">次へ</button>
       </div>
@@ -639,6 +688,7 @@ details.info .body b{color:var(--bone);font-weight:500}
   </section>
 
 </div>
+<div id="fx"></div>
 <div class="toast" id="toast"></div>
 
 <script id="core">
@@ -1498,6 +1548,7 @@ var A=window.AP;
 function el(id){return document.getElementById(id);}
 var G=null;
 var ui={blind:false,screen:'title',panel:null,viewer:0,lastPrivate:null,gateFor:null,
+        airShown:[null,null],airHold:false,lastTick:-1,heartT:0.25,
         phaseKey:'',key:'',sel:[],buildFor:-1,buildAttempt:-1,hintUsed:false,
         revealRound:-1,logLen:-1,logNode:null,cpuTimer:null,mode:'cpu',diff:'normal'};
 
@@ -1731,11 +1782,17 @@ function seedMote(atRest){
 }
 
 function resizeBg(){
+  var w=window.innerWidth, h=window.innerHeight;
+  /* スマホはスクロールのたびにツールバーが出入りして高さが変わる。
+     そのたびに作り直すと、泡が瞬間移動して背景が壊れて見える。
+     幅が同じで高さの変化が小さいうちは、寸法だけ合わせて中身は触らない。 */
+  if(W&&w===W&&Math.abs(h-H)<=170){ H=h; return; }
+  var oldW=W||w, oldH=H||h, keep=(W>0);
+
   DPR=1;                    /* 背景は軟らかい。全画面合成の費用は画素数に比例するので等倍で足りる */
-  W=window.innerWidth; H=window.innerHeight;
+  W=w; H=h;
   cv.width=Math.max(1,Math.round(W*DPR));
   cv.height=Math.max(1,Math.round(H*DPR));
-  cv.style.width=W+'px'; cv.style.height=H+'px';
   cx.setTransform(DPR,0,0,DPR,0,0);
 
   LW=Math.max(1,Math.ceil(W/2.5)); LH=Math.max(1,Math.ceil(H/2.5));
@@ -1791,11 +1848,29 @@ function resizeBg(){
 
   var nb=Math.round(Math.min(46,Math.max(18,W*H/16000)));
   var nm=Math.round(Math.min(60,Math.max(24,W*H/11000)));
-  bubbles=[]; motes=[];
-  for(i=0;i<nb;i++) bubbles.push(seedBubble(true));
-  for(i=0;i<nm;i++) motes.push(seedMote(true));
+  if(keep&&bubbles.length){
+    /* 既にいる泡は撒き直さず、比率で置き直す（画面が変わっても流れが途切れない） */
+    var sx=W/oldW, sy=H/oldH;
+    for(i=0;i<bubbles.length;i++){ bubbles[i].x*=sx; bubbles[i].y*=sy; }
+    for(i=0;i<motes.length;i++){ motes[i].x*=sx; motes[i].y*=sy; }
+    while(bubbles.length<nb) bubbles.push(seedBubble(true));
+    if(bubbles.length>nb) bubbles.length=nb;
+    while(motes.length<nm) motes.push(seedMote(true));
+    if(motes.length>nm) motes.length=nm;
+  }else{
+    bubbles=[]; motes=[];
+    for(i=0;i<nb;i++) bubbles.push(seedBubble(true));
+    for(i=0;i<nm;i++) motes.push(seedMote(true));
+  }
 }
-window.addEventListener('resize',resizeBg);
+/* 連続して飛んでくる resize は最後の1回だけ処理する */
+var rzTimer=null;
+function onResizeBg(){
+  clearTimeout(rzTimer);
+  rzTimer=setTimeout(function(){ rzTimer=null; resizeBg(); },160);
+}
+window.addEventListener('resize',onResizeBg);
+window.addEventListener('orientationchange',onResizeBg);
 
 /* ---- 毎フレーム ---- */
 
@@ -1911,6 +1986,142 @@ function drawBg(dt){
 buildStatics();
 resizeBg();
 
+/* ==========================================================================
+   音と触覚
+   音源ファイルは持たず Web Audio で合成する（容量は増えない）。
+   全体を水中らしく低く濁らせ、酸素が減るほど濁りを深くする。
+   Web Audio が無い環境・自動再生が許可されない環境では、黙って何もしない。
+   ========================================================================== */
+var prefs={sound:true,haptics:true};
+try{
+  var rawPrefs=localStorage.getItem('ap.prefs');
+  if(rawPrefs){ var q=JSON.parse(rawPrefs);
+    if(typeof q.sound==='boolean') prefs.sound=q.sound;
+    if(typeof q.haptics==='boolean') prefs.haptics=q.haptics; }
+}catch(e){}
+function savePrefs(){ try{ localStorage.setItem('ap.prefs',JSON.stringify(prefs)); }catch(e){} }
+
+function buzz(pattern){
+  try{ if(prefs.haptics&&navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+}
+
+var SFX=(function(){
+  var ctx=null, master=null, muffle=null, dry=null, wet=null, noiseBuf=null, ok=false;
+  var lastCut=-1;
+
+  function build(){
+    if(ctx) return ok;
+    try{
+      var AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return false;
+      ctx=new AC();
+
+      master=ctx.createGain(); master.gain.value=0.85;
+      /* 水を通した濁り。酸素が減るほど閉じていく。 */
+      muffle=ctx.createBiquadFilter();
+      muffle.type='lowpass'; muffle.frequency.value=6800; muffle.Q.value=0.6;
+      master.connect(muffle); muffle.connect(ctx.destination);
+
+      /* 石造りの塔に反響する感じ。畳み込みは重いので、遅延の帰還で作る。 */
+      dry=ctx.createGain(); dry.gain.value=0.86;
+      wet=ctx.createGain(); wet.gain.value=0.34;
+      var dl=ctx.createDelay(0.6); dl.delayTime.value=0.047;
+      var fb=ctx.createGain(); fb.gain.value=0.44;
+      var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1500;
+      wet.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl);
+      lp.connect(master); dry.connect(master);
+
+      var n=ctx.sampleRate*2, b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0);
+      for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
+      noiseBuf=b;
+
+      ok=true;
+    }catch(e){ ctx=null; ok=false; }
+    return ok;
+  }
+
+  /* 最初の操作で音を起こす。自動再生の制限はこれで外れる。 */
+  function unlock(){
+    if(!build()) return;
+    try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){}
+  }
+  function live(){ return ok&&prefs.sound&&ctx&&ctx.state==='running'; }
+
+  function out(g){ g.connect(dry); g.connect(wet); }
+
+  function tone(f,dur,type,vol,toF,delay){
+    if(!live()) return;
+    var t=ctx.currentTime+(delay||0);
+    var o=ctx.createOscillator(); o.type=type||'sine';
+    o.frequency.setValueAtTime(f,t);
+    if(toF) o.frequency.exponentialRampToValueAtTime(Math.max(20,toF),t+dur);
+    var g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol),t+Math.min(0.012,dur*0.25));
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); out(g);
+    o.start(t); o.stop(t+dur+0.03);
+  }
+  function rush(dur,vol,type,f0,f1,q,delay){
+    if(!live()) return;
+    var t=ctx.currentTime+(delay||0);
+    var n=ctx.createBufferSource(); n.buffer=noiseBuf; n.loop=true;
+    var bp=ctx.createBiquadFilter(); bp.type=type||'bandpass';
+    bp.frequency.setValueAtTime(f0,t);
+    if(f1) bp.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);
+    bp.Q.value=q||1;
+    var g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,vol),t+Math.min(0.03,dur*0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    n.connect(bp); bp.connect(g); out(g);
+    n.start(t); n.stop(t+dur+0.03);
+  }
+
+  var lib={
+    sel:    function(){ tone(680+Math.random()*90,0.055,'triangle',0.15); },
+    desel:  function(){ tone(400,0.05,'triangle',0.10); },
+    press:  function(){ rush(0.045,0.10,'bandpass',1500,760,1.3); },
+    deny:   function(){ tone(190,0.14,'square',0.07,140); },
+    chip:   function(){ tone(1120,0.05,'triangle',0.09);
+                        tone(1520,0.045,'triangle',0.07,null,0.045); },
+    plate:  function(){ rush(0.12,0.13,'bandpass',2200,600,2.2);
+                        tone(240,0.16,'triangle',0.10,150); },
+    /* エアを1枚失う音。ここが一番よく鳴る。 */
+    breath: function(){ rush(0.44,0.26,'bandpass',950,170,1.5);
+                        tone(126,0.34,'sine',0.17,58); },
+    heart:  function(v){ var a=0.16+0.26*(v||0);
+                        tone(58,0.15,'sine',a,36);
+                        tone(50,0.13,'sine',a*0.7,32,0.175); },
+    tick:   function(){ tone(1450,0.028,'sine',0.075); },
+    reveal: function(){ tone(620,0.13,'sine',0.09,760); },
+    win:    function(){ tone(392,0.17,'triangle',0.14);
+                        tone(587,0.36,'triangle',0.15,null,0.15); },
+    lose:   function(){ tone(330,0.22,'triangle',0.12);
+                        tone(208,0.44,'triangle',0.13,null,0.19); },
+    tensai: function(){ rush(0.75,0.38,'lowpass',1100,80,0.8);
+                        tone(176,0.70,'sawtooth',0.17,38);
+                        tone(88,0.85,'sine',0.20,30,0.04); },
+    drown:  function(){ tone(88,1.7,'sine',0.26,26);
+                        rush(1.7,0.16,'lowpass',620,55,0.7); }
+  };
+
+  return {
+    unlock:unlock,
+    play:function(name,arg){ try{ if(lib[name]) lib[name](arg); }catch(e){} },
+    /* 酸素が減るほど音がこもる。意識が遠のく感じを音で出す。 */
+    depth:function(ratio){
+      if(!ok||!ctx) return;
+      var f=430+6500*Math.pow(Math.max(0,Math.min(1,ratio)),1.6);
+      /* 毎フレーム予約すると自動化の予定が積み上がる。変化したときだけ書き換える。 */
+      if(lastCut>=0&&Math.abs(f-lastCut)<40) return;
+      lastCut=f;
+      try{ muffle.frequency.setTargetAtTime(f,ctx.currentTime,0.25); }catch(e){}
+    },
+    available:function(){ return ok; }
+  };
+})();
+
 /* ---------- 開始 ---------- */
 function startGame(mode,diff){
   ui.mode=mode; ui.diff=diff;
@@ -1918,7 +2129,8 @@ function startGame(mode,diff){
   ui.viewer=0; ui.lastPrivate=null; ui.gateFor=null;
   ui.phaseKey=''; ui.key=''; ui.panel=null;
   ui.buildFor=-1; ui.buildAttempt=-1; ui.revealRound=-1; ui.logLen=-1;
-  ui.sel=[];
+  ui.sel=[]; ui.airShown=[null,null]; ui.airHold=false; ui.lastTick=-1; ui.heartT=0.25;
+  rvClear(); rvStage=0; rvPlan=null;
   if(ui.cpuTimer){clearTimeout(ui.cpuTimer); ui.cpuTimer=null;}
   keepAwake(true);
   screen('game');
@@ -2113,10 +2325,10 @@ el('bd-deck').addEventListener('click',function(e){
   if(!t||t===this||t.disabled) return;
   var id=parseInt(t.getAttribute('data-id'),10);
   var k=ui.sel.indexOf(id);
-  if(k>=0) ui.sel.splice(k,1);
+  if(k>=0){ ui.sel.splice(k,1); SFX.play('desel'); buzz(7); }
   else{
-    if(ui.sel.length>=5){ toast('5枚まで。入れ替えるには選択済みの札を押す'); return; }
-    ui.sel.push(id);
+    if(ui.sel.length>=5){ toast('5枚まで。入れ替えるには選択済みの札を押す'); SFX.play('deny'); buzz(24); return; }
+    ui.sel.push(id); SFX.play('sel'); buzz(9);
   }
   refreshBuild();
 });
@@ -2227,6 +2439,10 @@ function showReveal(){
   if(ui.panel==='reveal'&&ui.revealRound===G.round) return;
   panel('reveal');
   ui.revealRound=G.round; ui.logLen=-1;
+  /* エアの表示は段取りが進むまで動かさない（勝者へ流れるのを見せてから合わせる） */
+  rvClear(); rvStage=0;
+  el('panel-reveal').className='panel on';
+  ui.airHold=true;
   var r=G.result, vd=el('rv-verdict');
   var dup=(r&&r.dup)?r.dup:[];
 
@@ -2265,11 +2481,40 @@ function showReveal(){
   }else pain.style.display='none';
 
   el('rv-next').textContent=(G.round>=A.MAX_ROUNDS)?'決着を見る':'第'+(G.round+1)+'回戦へ';
+
+  /* ここから段取り。触れれば飛ばせる。 */
+  var win=(r&&r.type==='win');
+  var mine=win&&(r.winner===ui.viewer);
+  var potSize=win?r.pot:0;
+  rvPlan={
+    1:function(){ SFX.play('reveal'); },
+    2:function(){
+        if(!r||r.type==='carry'||r.type==='draw'){ SFX.play('reveal'); buzz(20); }
+        else if(G.mode!=='cpu'){ SFX.play('win'); buzz([26,50,26]); }
+        else if(mine){ SFX.play('win'); buzz([26,50,26]); }
+        else{ SFX.play('lose'); buzz(70); }
+      },
+    3:function(){ if(r&&r.tensai){ SFX.play('tensai'); buzz([50,60,50,60,130]); } },
+    4:function(){ if(win) flyChips(r.winner,potSize); ui.airHold=false; },
+    5:function(){ ui.airHold=false; }
+  };
+  rvAt(420, function(){ rvSet(1); });
+  rvAt(1150,function(){ rvSet(2); });
+  var t=1150;
+  if(r&&r.tensai){ t=1950; rvAt(t,function(){ rvSet(3); }); }
+  rvAt(t+700, function(){ rvSet(4); });
+  rvAt(t+1500,function(){ rvSet(5); });
 }
 el('rv-next').onclick=function(){
+  rvClear(); rvStage=0; rvPlan=null; ui.airHold=false;
   G.nextRound();
+  if(G.phase==='over') SFX.play(G.winner===null?'lose':(G.mode!=='cpu'||G.winner===0?'win':'drown'));
   ui.panel=null; ui.revealRound=-1; ui.key='';
 };
+el('panel-reveal').addEventListener('click',function(e){
+  if(e.target&&e.target.id==='rv-next') return;
+  rvSkip();
+});
 
 /* ---------- 決着 ---------- */
 function showOver(){
@@ -2312,7 +2557,7 @@ function setP(pre,p,x2){
   el(pre+'-o2-lab').textContent = x2 ? 'O2×2' : 'O2';
   el(pre+'-o2-lab').parentNode.classList.toggle('x2',!!x2);
   el(pre+'-o2-bar').parentNode.classList.toggle('x2',!!x2);
-  el(pre+'-air').textContent=p.chips;
+  el(pre+'-air').textContent=Math.round(ui.airShown[p.idx]===null?p.chips:ui.airShown[p.idx]);
   el(pre+'-air-bar').style.width=Math.max(0,Math.min(100,p.chips/A.START_AIR*100))+'%';
   var o2=Math.max(0,p.o2);
   el(pre+'-o2').textContent=Math.ceil(o2);
@@ -2416,13 +2661,159 @@ function frame(ts){
   drawBg(dt);
   if(!G||ui.screen!=='game') return;
   G.tick(dt);
-  while(G.events.length){ if(G.events.shift().t==='breath') burst(); }
+  easeAir(dt);
+  pulseAudio(dt);
+  while(G.events.length){
+    if(G.events.shift().t==='breath'){ burst(); SFX.play('breath'); buzz([16,45,16]); }
+  }
   cpuLoop();
   var k=stateKey();
   if(k!==ui.key){ ui.key=k; step(); }
   if(ui.screen==='game') render();
 }
 requestAnimationFrame(frame);
+
+/* ==========================================================================
+   手触りの結線 ── 押下の反応、消音切替、決着の段取り、エアの移動
+   ========================================================================== */
+
+/* 最初の操作で音を起こす（自動再生の制限を外す） */
+document.addEventListener('pointerdown',function(){ SFX.unlock(); },{passive:true});
+document.addEventListener('touchstart',function(){ SFX.unlock(); },{passive:true});
+
+/* どのボタンを押しても手応えが返る。札だけは専用の音を鳴らすので除く。 */
+document.addEventListener('pointerdown',function(e){
+  var t=e.target;
+  while(t&&t!==document.body&&t.tagName!=='BUTTON') t=t.parentNode;
+  if(!t||t.tagName!=='BUTTON') return;
+  if(t.disabled){ SFX.play('deny'); buzz(24); return; }
+  if(t.classList.contains('cel')) return;      /* 札は選択・解除で鳴らし分ける */
+  if(t.classList.contains('pbtn')) SFX.play('plate'); else SFX.play('press');
+  buzz(10);
+},{passive:true});
+
+/* 消音と振動の切替 */
+function paintPrefs(){
+  var g=el('mute-g');
+  if(g){ g.textContent=prefs.sound?'♪':'♪ 切'; g.classList.toggle('off',!prefs.sound); }
+  var s=el('snd-toggle'); if(s) s.textContent='音 '+(prefs.sound?'オン':'オフ');
+  var h=el('hap-toggle'); if(h) h.textContent='振動 '+(prefs.haptics?'オン':'オフ');
+}
+function toggleSound(){
+  prefs.sound=!prefs.sound; savePrefs(); paintPrefs();
+  if(prefs.sound){ SFX.unlock(); SFX.play('reveal'); }
+}
+el('mute-g').onclick=toggleSound;
+el('snd-toggle').onclick=toggleSound;
+el('hap-toggle').onclick=function(){
+  prefs.haptics=!prefs.haptics; savePrefs(); paintPrefs();
+  if(prefs.haptics) buzz(24);
+};
+paintPrefs();
+
+/* ---------- 決着の段取り ----------
+   両者の役は最初から見えている。そのうえで
+   役名 → 判定 → 天災 → エアの移動 の順に運ぶ。
+   画面に触れれば残りを飛ばせる。 */
+var rvTimers=[], rvStage=0, rvPlan=null;
+
+function rvClear(){
+  for(var i=0;i<rvTimers.length;i++) clearTimeout(rvTimers[i]);
+  rvTimers=[];
+}
+function rvAt(ms,fn){ rvTimers.push(setTimeout(fn,ms)); }
+function rvSet(n){
+  if(n<=rvStage) return;
+  var p=el('panel-reveal');
+  for(var k=rvStage+1;k<=n;k++){
+    p.classList.add('s'+k);
+    if(rvPlan&&rvPlan[k]) rvPlan[k]();
+  }
+  rvStage=n;
+}
+function rvSkip(){
+  if(rvStage>=5) return;
+  rvClear();
+  rvSet(5);
+}
+
+/* 場のエアが勝者へ流れるのを見せる */
+function flyChips(toWinner,count){
+  var fx=el('fx'); if(!fx) return;
+  var src=el('f-pot').getBoundingClientRect();
+  var dstEl=(toWinner===ui.viewer)?el('me-air'):el('opp-air');
+  var dst=dstEl.getBoundingClientRect();
+  var n=Math.max(3,Math.min(10,count));
+  for(var i=0;i<n;i++){
+    (function(i){
+      var c=document.createElement('div');
+      c.className='chip';
+      var x0=src.left+src.width*0.5-6.5+(Math.random()-0.5)*14;
+      var y0=src.top+src.height*0.5-6.5+(Math.random()-0.5)*10;
+      c.style.left=x0+'px'; c.style.top=y0+'px';
+      c.style.opacity='0';
+      fx.appendChild(c);
+      var dx=dst.left+dst.width*0.5-6.5-x0;
+      var dy=dst.top+dst.height*0.5-6.5-y0;
+      setTimeout(function(){
+        c.style.transition='transform .52s cubic-bezier(.35,.05,.25,1),opacity .52s';
+        c.style.opacity='1';
+        c.style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale(.7)';
+        SFX.play('chip');
+        setTimeout(function(){
+          c.style.opacity='0';
+          setTimeout(function(){ if(c.parentNode) c.parentNode.removeChild(c); },260);
+        },420);
+      },i*55);
+    })(i);
+  }
+}
+
+/* ---------- 表示するエアを滑らかに動かす ---------- */
+function airTarget(i){ return G?G.P[i].chips:0; }
+function easeAir(dt){
+  if(!G) return;
+  for(var i=0;i<2;i++){
+    if(ui.airShown[i]===null) ui.airShown[i]=airTarget(i);
+    if(ui.airHold) continue;
+    var d=airTarget(i)-ui.airShown[i];
+    if(Math.abs(d)<0.02) ui.airShown[i]=airTarget(i);
+    else ui.airShown[i]+=d*Math.min(1,dt*7);
+  }
+}
+
+/* ---------- 秒読みと心拍 ---------- */
+function viewerClock(){
+  if(!G) return null;
+  if(G.paused) return null;
+  var v=ui.viewer;
+  if(G.phase==='plate') return (G.plateSel[v]===null&&G.onStage(v))?G.plateClock[v]:null;
+  if(G.phase==='bet')   return (G.toAct===v)?(G.raiseOpen?G.betLeft:G.forceLeft):null;
+  if(G.phase==='build') return (!G.submitted[v]&&G.onStage(v))?G.buildClock[v]:null;
+  return null;
+}
+function pulseAudio(dt){
+  if(!G) return;
+  var p=G.P[ui.viewer];
+  SFX.depth(Math.max(0,Math.min(1,p.o2/100)));
+
+  var left=viewerClock();
+  if(left!==null&&left<=10.4){
+    var n=Math.ceil(left);
+    if(n!==ui.lastTick&&n>=0){ ui.lastTick=n; if(left>0.2) SFX.play('tick'); }
+  }else ui.lastTick=-1;
+
+  var active=(G.phase==='bet'||G.phase==='build'||G.phase==='plate')&&!G.paused;
+  if(active&&p.o2<32){
+    var danger=1-p.o2/32;
+    ui.heartT-=dt;
+    if(ui.heartT<=0){
+      SFX.play('heart',danger);
+      buzz(Math.round(8+14*danger));
+      ui.heartT=1.15-0.55*danger;
+    }
+  }else ui.heartT=0.25;
+}
 
 /* ---------- タイトル ---------- */
 (function(){

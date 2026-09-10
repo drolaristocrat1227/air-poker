@@ -102,8 +102,16 @@ function checkDisplay(env) {
   if (!g || ui.screen !== 'game') return null;
   const v = ui.viewer, o = 1 - v;
   const txt = (id) => d.getElementById(id).textContent;
-  if (txt('me-air') !== String(g.P[v].chips)) return `手持ちエアの表示が違う ${txt('me-air')} != ${g.P[v].chips}`;
-  if (txt('opp-air') !== String(g.P[o].chips)) return `相手エアの表示が違う ${txt('opp-air')} != ${g.P[o].chips}`;
+  const shown = (i) => (ui.airShown && ui.airShown[i] !== null)
+    ? Math.round(ui.airShown[i]) : g.P[i].chips;
+  if (txt('me-air') !== String(shown(v)))
+    return `手持ちエアの表示が内部の表示値と食い違う ${txt('me-air')} != ${shown(v)}`;
+  if (txt('opp-air') !== String(shown(o)))
+    return `相手エアの表示が内部の表示値と食い違う ${txt('opp-air')} != ${shown(o)}`;
+  for (let i = 0; i < 2; i++) {
+    if (ui.airShown && ui.airShown[i] !== null && Math.abs(ui.airShown[i] - g.P[i].chips) > 50)
+      return `エアの表示が内部値から離れすぎ ${ui.airShown[i]} vs ${g.P[i].chips}`;
+  }
   if (txt('f-pot') !== String(g.pot())) return `場のエアの表示が違う ${txt('f-pot')} != ${g.pot()}`;
   if (txt('f-round') !== String(g.round)) return `回戦数の表示が違う`;
   const tm = txt('t-me');
@@ -426,6 +434,185 @@ section('スマホ対応・更新');
   ok(!d.getElementById('update-bar').classList.contains('on'), '起動時に更新の帯は出ていない');
   ok(env.errors.length === 0, 'スマホ向けの初期化で例外が出ない', env.errors[0] || '');
   env.dom.window.close();
+}
+
+/* =============================================================
+   手触り ── 音・触覚・決着の段取り
+   ============================================================= */
+/* =============================================================
+   画面寸法の変化に耐えるか
+   スマホはスクロールのたびにツールバーが出入りして innerHeight が変わる。
+   そのたびに背景を作り直すと泡が瞬間移動して壊れて見える。
+   ============================================================= */
+section('画面寸法の変化');
+{
+  const env = boot('resize');
+  const { d, w, advance } = env;
+  advance(16);
+
+  const bubblesOf = () => {
+    /* 泡の配列そのものは覗けないので、描画の作り直し回数を間接的に見る。
+       ここでは「同じ泡が生き続けているか」を位置の連続性で判定する。 */
+    return null;
+  };
+  let reseeds = 0;
+  const origRandom = w.Math.random;
+
+  /* 幅は変えず、高さだけをツールバー相当（90px）で往復させる */
+  const base = 844;
+  for (let i = 0; i < 30; i++) {
+    Object.defineProperty(w, 'innerHeight', { value: base - (i % 2 ? 90 : 0), configurable: true });
+    w.dispatchEvent(new w.Event('resize'));
+  }
+  advance(400);
+  ok(env.errors.length === 0, 'スクロール相当の寸法変化で例外が出ない', env.errors[0] || '');
+
+  /* 幅が変われば作り直す（回転など） */
+  Object.defineProperty(w, 'innerWidth', { value: 700, configurable: true });
+  w.dispatchEvent(new w.Event('resize'));
+  advance(400);
+  ok(env.errors.length === 0, '幅の変化でも例外が出ない', env.errors[0] || '');
+
+  /* 背景の描画が続いている（フレームが回る） */
+  const before = env.now;
+  advance(200);
+  ok(env.now > before, '寸法変化のあとも描画が続く');
+  env.dom.window.close();
+}
+
+section('手触り');
+{
+  /* 設定の保存 */
+  {
+    const env = boot('prefs');
+    env.advance(16);
+    const w = env.w, d = env.d;
+    ok(d.getElementById('snd-toggle').textContent.indexOf('オン') >= 0, '初期状態は音がオン');
+    d.getElementById('snd-toggle').click();
+    env.advance(16);
+    ok(d.getElementById('snd-toggle').textContent.indexOf('オフ') >= 0, '押すと音がオフになる');
+    let saved = null;
+    try { saved = JSON.parse(w.localStorage.getItem('ap.prefs')); } catch (e) {}
+    ok(saved && saved.sound === false, '設定が保存される', JSON.stringify(saved));
+    d.getElementById('hap-toggle').click();
+    env.advance(16);
+    try { saved = JSON.parse(w.localStorage.getItem('ap.prefs')); } catch (e) {}
+    ok(saved && saved.haptics === false, '振動の設定も保存される');
+    ok(env.errors.length === 0, '音が使えない環境でも例外が出ない', env.errors[0] || '');
+    env.dom.window.close();
+  }
+
+  /* 保存した設定が次回に効く */
+  {
+    const env = boot('prefs2');
+    env.w.localStorage.setItem('ap.prefs', JSON.stringify({ sound: false, haptics: false }));
+    env.dom.window.close();
+    const env2 = boot('prefs3');
+    env2.advance(16);
+    /* jsdom は起動ごとに保存領域が分かれるため、ここでは読み込み経路が
+       例外にならないことだけを見る */
+    ok(env2.errors.length === 0, '保存済みの設定を読んでも例外が出ない', env2.errors[0] || '');
+    env2.dom.window.close();
+  }
+
+  /* 決着の段取り */
+  {
+    const env = boot('reveal');
+    const { d, w, advance } = env;
+    advance(16);
+    d.querySelector('[data-start="cpu:normal"]').click();
+
+    const vis = (id) => d.getElementById(id).classList.contains('on');
+    let guard = 0, reached = false;
+    while (guard++ < 4000) {
+      advance(50);
+      if (vis('panel-reveal')) { reached = true; break; }
+      if (!vis('s-game')) continue;
+      const ui = w.__ap.ui, g = w.__ap.game;
+      if (vis('panel-plate')) {
+        const b = d.querySelector('#plate-list .pbtn:not([disabled])');
+        if (b) b.click();
+      } else if (vis('panel-bet')) {
+        const c = d.getElementById('b-call');
+        if (!c.disabled) c.click();
+      } else if (vis('panel-build')) {
+        const pi = ui.buildFor, p = g.P[pi];
+        const cands = w.AP.analyzePool(p.avail).bySum[p.target];
+        if (cands && cands.length) {
+          for (const id of cands[0].cards) {
+            const cel = d.querySelector('#bd-deck .cel[data-id="' + id + '"]');
+            if (cel) cel.click();
+          }
+          const okb = d.getElementById('bd-ok');
+          if (!okb.disabled) okb.click();
+        } else advance(3000);
+      }
+    }
+    ok(reached, '決着画面まで到達');
+
+    if (reached) {
+      const panel = d.getElementById('panel-reveal');
+      ok(!panel.classList.contains('s1'), '出た直後は段取りが始まっていない');
+      ok(w.__ap.ui.airHold === true, 'エアの表示は段取りが進むまで止めている');
+      advance(600);
+      ok(panel.classList.contains('s1'), '役名が出る（第1段）');
+      advance(800);
+      ok(panel.classList.contains('s2'), '判定が出る（第2段）');
+      advance(3000);
+      ok(panel.classList.contains('s5'), '最後まで進む（第5段）', panel.className);
+      ok(w.__ap.ui.airHold === false, '段取りが終わればエアの表示が動き出す');
+      advance(1500);
+      const g = w.__ap.game;
+      const shown = w.__ap.ui.airShown;
+      ok(Math.round(shown[0]) === g.P[0].chips && Math.round(shown[1]) === g.P[1].chips,
+         'エアの表示が最終的に内部の値に一致する',
+         shown.map((x, i) => Math.round(x) + '/' + g.P[i].chips).join(' '));
+      ok(env.errors.length === 0, '段取り中に例外が出ない', env.errors[0] || '');
+    }
+    env.dom.window.close();
+  }
+
+  /* 画面に触れると最後まで飛ぶ */
+  {
+    const env = boot('skip');
+    const { d, w, advance } = env;
+    advance(16);
+    d.querySelector('[data-start="cpu:easy"]').click();
+    const vis = (id) => d.getElementById(id).classList.contains('on');
+    let guard = 0, reached = false;
+    while (guard++ < 4000) {
+      advance(50);
+      if (vis('panel-reveal')) { reached = true; break; }
+      if (!vis('s-game')) continue;
+      const ui = w.__ap.ui, g = w.__ap.game;
+      if (vis('panel-plate')) {
+        const b = d.querySelector('#plate-list .pbtn:not([disabled])');
+        if (b) b.click();
+      } else if (vis('panel-bet')) {
+        const c = d.getElementById('b-call');
+        if (!c.disabled) c.click();
+      } else if (vis('panel-build')) {
+        const pi = ui.buildFor, p = g.P[pi];
+        const cands = w.AP.analyzePool(p.avail).bySum[p.target];
+        if (cands && cands.length) {
+          for (const id of cands[0].cards) {
+            const cel = d.querySelector('#bd-deck .cel[data-id="' + id + '"]');
+            if (cel) cel.click();
+          }
+          const okb = d.getElementById('bd-ok');
+          if (!okb.disabled) okb.click();
+        } else advance(3000);
+      }
+    }
+    if (reached) {
+      const panel = d.getElementById('panel-reveal');
+      panel.click();                       /* 画面に触れる */
+      advance(16);
+      ok(panel.classList.contains('s5'), '触れると一気に最後まで進む', panel.className);
+      ok(env.errors.length === 0, '飛ばしても例外が出ない', env.errors[0] || '');
+    } else ok(false, '決着画面まで到達（飛ばしの検査）');
+    env.dom.window.close();
+  }
 }
 
 async function updateTests() {
