@@ -100,7 +100,9 @@ function checkDisplay(env) {
   const { d, w } = env;
   const g = w.__ap.game, ui = w.__ap.ui;
   if (!g || ui.screen !== 'game') return null;
-  const v = ui.viewer, o = 1 - v;
+  /* 画面が実際に描いた視点で比べる。手番が入れ替わった直後、
+     検査が次の描画より先に走ると別人の値と突き合わせてしまうため。 */
+  const v = (ui.rv === undefined) ? ui.viewer : ui.rv, o = 1 - v;
   const txt = (id) => d.getElementById(id).textContent;
   const shown = (i) => (ui.airShown && ui.airShown[i] !== null)
     ? Math.round(ui.airShown[i]) : g.P[i].chips;
@@ -477,6 +479,69 @@ section('画面寸法の変化');
   const before = env.now;
   advance(200);
   ok(env.now > before, '寸法変化のあとも描画が続く');
+  env.dom.window.close();
+}
+
+/* =============================================================
+   合計が合わなくても提示できる（原作のミス条件）
+   ============================================================= */
+section('合計違いの提示');
+{
+  const env = boot('wrongsum');
+  const { d, w, advance } = env;
+  advance(16);
+  d.querySelector('[data-start="pvp"]').click();
+
+  const vis = (id) => d.getElementById(id).classList.contains('on');
+  let guard = 0, reached = false;
+  while (guard++ < 3000) {
+    advance(50);
+    if (vis('panel-pass')) { const b = d.getElementById('pass-ok'); if (!b.hidden) b.click(); continue; }
+    if (vis('panel-plate')) {
+      const b = d.querySelector('#plate-list .pbtn:not([disabled])');
+      if (b) b.click();
+      continue;
+    }
+    if (vis('panel-build')) { reached = true; break; }
+  }
+  ok(reached, '役作り画面まで到達');
+
+  if (reached) {
+    const g = w.__ap.game, ui = w.__ap.ui, pi = ui.buildFor;
+    const okb = d.getElementById('bd-ok');
+    const cel = (id) => d.querySelector('#bd-deck .cel[data-id="' + id + '"]');
+    const good = w.AP.analyzePool(g.deck).bySum[g.P[pi].target][0].cards;
+
+    ok(okb.disabled, '5枚そろう前は決定できない');
+
+    /* 合計が合わない5枚を選ぶ */
+    let wrong = null;
+    for (let i = 0; i < 52 && !wrong; i++) {
+      if (!g.deck[i] || good.indexOf(i) >= 0) continue;
+      const t = [i].concat(good.slice(1));
+      if (t.reduce((a, id) => a + w.AP.cRank(id), 0) !== g.P[pi].target) wrong = t;
+    }
+    for (const id of wrong) { const c = cel(id); if (c) c.click(); }
+    ok(ui.sel.length === 5, '5枚選べた');
+    ok(!okb.disabled, '合計が合わなくても決定を押せる');
+    ok(/合計違い/.test(okb.textContent), 'ボタン自身が合計違いを告げる', okb.textContent);
+    ok(okb.className.indexOf('dgr') >= 0, '警告の見た目になる', okb.className);
+
+    /* 正しい5枚に直すと、ふつうの決定に戻る */
+    d.getElementById('bd-clear').click();
+    for (const id of good) { const c = cel(id); if (c) c.click(); }
+    ok(!okb.disabled && okb.textContent === '決定', '合計が合えば通常の決定に戻る', okb.textContent);
+    ok(okb.className.indexOf('pri') >= 0, '通常の見た目に戻る', okb.className);
+
+    /* 合計違いで出すとミスになる */
+    d.getElementById('bd-clear').click();
+    for (const id of wrong) { const c = cel(id); if (c) c.click(); }
+    okb.click();
+    advance(50);
+    ok(g.P[pi].missed === true, '合計違いで出すとミスになる');
+    ok(g.P[pi].hand === null, 'ミスなので役としては残らない');
+    ok(env.errors.length === 0, '例外が出ない', env.errors[0] || '');
+  }
   env.dom.window.close();
 }
 

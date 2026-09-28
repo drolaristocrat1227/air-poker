@@ -506,11 +506,31 @@ section('6. 役作り・天災・持ち越し');
   const good = bestOf(g3, 0);
   ok(g3.submitHand(0, [good[0], good[0], good[1], good[2], good[3]]) === false, '同じ札の重複提示は拒否');
   ok(g3.submitHand(0, good.slice(0, 4)) === false, '4枚の提示は拒否');
-  const wrong = good.slice();
-  wrong[0] = (wrong[0] + 4) % 52;
-  if (wrong.reduce((a, id) => a + cRank(id), 0) !== g3.P[0].target)
-    ok(g3.submitHand(0, wrong) === false, '合計が合わない提示は拒否');
   ok(g3.submitHand(0, good) === true, '正しい提示は受理される');
+
+  /* 合計が合わない5枚も「出せる」。出した瞬間にミスになる（原作のミス条件）。
+     盤面ありでも暗算でも同じ扱い。 */
+  for (const blind of [false, true]) {
+    const gw = new Game({ mode: 'pvp', seed: 8899, blind });
+    openPlates(gw);
+    const okCards = bestOf(gw, 0);
+    let wrong = null;
+    for (let i = 0; i < 52 && !wrong; i++) {
+      if (!gw.deck[i] || okCards.indexOf(i) >= 0) continue;
+      const t = [i].concat(okCards.slice(1));
+      if (t.reduce((a, id) => a + cRank(id), 0) !== gw.P[0].target) wrong = t;
+    }
+    ok(gw.submitHand(0, wrong) === true,
+       (blind ? '暗算' : '盤面あり') + 'モードでも合計違いの5枚を出せる');
+    ok(gw.P[0].missed === true && /合計数が違う/.test(gw.P[0].missReason || ''),
+       (blind ? '暗算' : '盤面あり') + 'モードで合計違いはミスになる', gw.P[0].missReason);
+    ok(gw.P[0].hand === null && gw.P[0].laid && gw.P[0].laid.length === 5,
+       'ミスでも出した5枚は記録され、山からも消える対象になる');
+    gw.submitHand(1, bestOf(gw, 1));
+    passBet(gw);
+    ok(gw.phase === 'reveal' && gw.result.winner === 1, 'ミスした側が回戦を落とす');
+    ok(wrong.every(id => gw.deck[id] === 0), '合計を間違えた5枚も山から消える');
+  }
 
   /* 双方ミスの再挑戦と持ち越し */
   const g4 = new Game({ mode: 'pvp', seed: 5 });

@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="1.12.0">
+<meta name="app-version" content="1.12.1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#04141a">
 <title>エア・ポーカー</title>
@@ -524,6 +524,7 @@ details.info .body b{color:var(--bone);font-weight:500}
       <li>制限時間は<b>100秒</b>。作った役の強弱で勝敗が決まる。</li>
       <li>A=1、J=11、Q=12、K=13として合計する。役の強さは通常のポーカーに準じ、A は最強のランクとして扱う。</li>
       <li>一度使った札はその後の勝負で使えない。同じ山から選ぶので、回を重ねるごとに選択肢は急速に枯れていく。</li>
+      <li>5枚そろえば<b>合計が違っても提示できる</b>。盤面ありモードでは、そのとき決定ボタン自身が「合計違い」と告げる。</li>
       <li><b>ミス</b>＝100秒超過／合計数の不一致／使用済み札の再使用。ミスした側はその回戦を落とす。双方ミスなら、<b>ベットのあと交互に</b>もう一度100秒が与えられる。</li>
     </ul>
 
@@ -1339,9 +1340,9 @@ Game.prototype.submitHand=function(pi,cards){
   if(this.phase!=='build'||this.submitted[pi]) return false;
   if(!this.wellFormed(cards)) return false;
   var fault=this.handFault(pi,cards);
-  /* 通常モードは誤った提示を受け付けない（画面側でも決定できない）。
-     暗算モードは提示できてしまい、その場でミスになる。 */
-  if(fault&&!this.blind) return false;
+  /* 5枚そろっていれば出せる。合計が違えば、その場でミスになる。
+     原作でも「合計数を間違える」はミスの一種であって、出せない手ではない。
+     盤面ありモードでは合計が見えているので、誤って出すことはまず無い。 */
 
   var p=this.P[pi];
   p.lastBuild=BUILD_TIME-Math.max(0,this.buildClock[pi]);
@@ -2471,8 +2472,12 @@ function refreshBuild(){
     var cidv=parseInt(cells[i].getAttribute('data-id'),10);
     cells[i].classList.toggle('sel',ui.sel.indexOf(cidv)>=0);
   }
-  /* 暗算モードでは間違った5枚でも提示できる。誤りはその場でミスになる。 */
-  el('bd-ok').disabled = G.blind ? !full : !(full&&diff===0);
+  /* 5枚そろえば出せる。合計が違うときは、ボタン自身がそれを告げる。 */
+  var okb=el('bd-ok');
+  okb.disabled=!full;
+  var wrong=(full&&!G.blind&&diff!==0);
+  okb.textContent = wrong ? '合計違い ─ このまま出す' : '決定';
+  okb.className = 'btn '+(wrong?'dgr':'pri');
 }
 function buildInfo(pi){
   var op=G.P[1-pi], used=[], i;
@@ -2499,7 +2504,10 @@ function buildInfo(pi){
 }
 el('bd-clear').onclick=function(){ ui.sel=[]; refreshBuild(); };
 el('bd-ok').onclick=function(){
-  if(!G.submitHand(ui.buildFor,ui.sel)) toast('その5枚は提示できません');
+  var pi=ui.buildFor;
+  if(!G.submitHand(pi,ui.sel)){ toast('その5枚は提示できません'); return; }
+  var p=G.P[pi];
+  if(p.missed) toast('ミス ── '+(p.missReason||'合計が合っていない'));
 };
 el('bd-hint').onclick=function(){
   if(ui.hintUsed){ toast('この回戦の思考は使い切った'); return; }
@@ -2677,6 +2685,7 @@ function renderLog(node){
 }
 function render(){
   var v=ui.viewer, o=1-v, me=G.P[v], op=G.P[o];
+  ui.rv=v;                       /* 実際に描いた視点（検証が参照する） */
   el('me-name').innerHTML=me.name+'<small>'+(G.mode==='pvp'?'PLAYER '+(v+1):'YOU')+'</small>';
   el('opp-name').innerHTML=op.name+'<small>'+(G.mode==='pvp'?'PLAYER '+(o+1):'OPPONENT')+'</small>';
   var x2=function(q){ return !q.isCPU&&G.onStage(q.idx)&&G.isDeciding(q.idx); };
