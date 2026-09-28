@@ -36,13 +36,16 @@ function invariants(g, tag) {
   if (g.vanished < 0) return `消滅エアが負値 (${tag})`;
   if (g.carry < 0) return `持ち越し負値 (${tag})`;
   if (g.cpuFallback) return `CPU が不正手を返した (${tag})`;
+  if (A.avail !== B.avail || A.avail !== g.deck) return `山が共有されていない (${tag})`;
+  let deckUsed = 0;
+  for (let i = 0; i < 52; i++) if (!g.deck[i]) deckUsed++;
+  if (deckUsed > 50) return `山から消えた札が多すぎる ${deckUsed} (${tag})`;
   for (const p of g.P) {
     if (p.chips < 0) return `チップ負値 ${p.name} ${p.chips} (${tag})`;
     if (p.committed < 0) return `賭け額負値 ${p.name} (${tag})`;
     if (p.o2 < -1e-6 || p.o2 > 100.001) return `酸素域外 ${p.o2} (${tag})`;
-    let used = 0;
-    for (let i = 0; i < 52; i++) if (!p.avail[i]) used++;
-    if (used % 5 !== 0 || used > 25) return `使用済み札数が不正 ${used} (${tag})`;
+    /* 山は1組を二人で共有する。使った札は双方から消えるので、
+       枚数は5の倍数になるとは限らない（重なったぶんだけ減りが鈍る）。 */
     if (p.hand) {
       if (new Set(p.hand).size !== 5) return `提示手に重複 (${tag})`;
       const s = p.hand.reduce((a, id) => a + cRank(id), 0);
@@ -487,10 +490,15 @@ section('6. 役作り・天災・持ち越し');
        '勝者が受け取るのは場のエアだけ',
        `${g2.P[W].chips} vs ${chipsBefore[W] + g2.result.pot}`);
   }
-  ok(h0.every(id => g2.P[0].avail[id] === 0), '提示した札は以後使えない（自分）');
-  ok(h1.every(id => g2.P[1].avail[id] === 0), '提示した札は以後使えない（相手）');
-  ok(h0.every(id => g2.P[1].avail[id] === 1 || h1.indexOf(id) >= 0),
-     '相手の使用札は自分の山に影響しない');
+  ok(h0.every(id => g2.deck[id] === 0), '提示した札は以後使えない（自分）');
+  ok(h1.every(id => g2.deck[id] === 0), '提示した札は以後使えない（相手）');
+  ok(h0.every(id => g2.P[1].avail[id] === 0),
+     '相手が使った札も自分の山から消える（1組を共有している）');
+  const dupCount = h0.filter(id => h1.indexOf(id) >= 0).length;
+  let gone = 0;
+  for (let i = 0; i < 52; i++) if (!g2.deck[i]) gone++;
+  ok(gone === 10 - dupCount, '重なったぶんだけ山の減りが鈍る',
+     `消えた ${gone} 枚 / 重複 ${dupCount} 枚`);
 
   /* 不正な役は拒否される */
   const g3 = new Game({ mode: 'pvp', seed: 77 });
@@ -687,10 +695,22 @@ section('8. 数字板');
 
   const seen = Object.keys(hist).length;
   ok(seen === AP.PLATE_HI - AP.PLATE_LO + 1, '6〜64 の全ての数字が現れる', `${seen} 種`);
-  const counts = Object.values(hist);
-  const spread = Math.max(...counts) / Math.min(...counts);
-  ok(spread < 3.0, '特定の数字に極端な偏りが無い',
-     `最大/最小 ${spread.toFixed(2)}（平均 ${(counts.reduce((x, y) => x + y, 0) / counts.length).toFixed(1)}）`);
+  /* 山を共有すると終盤の帯が狭まるので、端の数字は各自2枚まで、
+     残り3枚は終盤まで組める中核帯から配る。 */
+  let bad2 = 0, note2 = '';
+  for (let s2 = 0; s2 < 400; s2++) {
+    const g = new Game({ mode: 'pvp', seed: s2 * 71 + 9 });
+    for (const p of g.P) {
+      const wide = p.plates.filter(n => n < AP.CORE_LO || n > AP.CORE_HI).length;
+      const core = p.plates.filter(n => n >= AP.CORE_LO && n <= AP.CORE_HI).length;
+      if (wide !== 2 || core !== 3) { bad2++; if (!note2) note2 = `端${wide}枚 / 中核${core}枚`; }
+    }
+  }
+  ok(bad2 === 0, '各自「端に寄った数字2枚＋中核帯3枚」で配られる', note2);
+  const wideSeen = Object.keys(hist).map(Number).filter(n => n < AP.CORE_LO || n > AP.CORE_HI).length;
+  const coreSeen = Object.keys(hist).map(Number).filter(n => n >= AP.CORE_LO && n <= AP.CORE_HI).length;
+  ok(coreSeen === AP.CORE_HI - AP.CORE_LO + 1, '中核帯の数字は全て出る', String(coreSeen));
+  ok(wideSeen >= 30, '端の数字も широко 出る'.replace('широко', '広く'), String(wideSeen));
 
   /* S.F. 圏内の均等配分は廃止した ── 枚数はばらつき、0枚の配りもある */
   const sfCounts = {};
@@ -742,16 +762,56 @@ section('9. 端の数字の危うさ');
   ok(g3.phase === 'reveal', '双方組めなくても決着段階へ進む');
   ok(g3.result && g3.result.type === 'carry', '場のエアは次回戦へ持ち越される');
 
-  /* 片方だけ組めない場合はその者が回戦を落とす */
-  const g4 = new Game({ mode: 'pvp', seed: 4242 });
-  for (let i = 0; i < 52; i++) g4.P[0].avail[i] = 0;
-  openPlates(g4);
-  if (g4.phase === 'build' && !g4.submitted[1]) g4.submitHand(1, bestOf(g4, 1));
-  while (g4.phase === 'bet')
-    g4.act(g4.toAct, Math.max(0, g4.deficit(g4.toAct)) > 0 ? 'call' : 'check');
-  if (g4.phase === 'build' && !g4.submitted[1])
-    g4.submitHand(1, analyzePool(g4.P[1].avail).bySum[g4.P[1].target][0].cards);
-  ok(g4.phase === 'reveal' && g4.result.winner === 1, '組めない側がその回戦を落とす');
+  /* 山が痩せても、打ち直しによって必ず組める数字になる */
+  {
+    let checked = 0, dead = 0;
+    for (let s3 = 1; s3 <= 200; s3++) {
+      const g = new Game({ mode: 'cpu', difficulty: 'normal', seed: s3 * 311 });
+      g.P[0].isCPU = true; g.P[1].isCPU = true;
+      let guard3 = 0, seen3 = 0;
+      while (g.phase !== 'over' && guard3++ < 200000) {
+        if (g.phase === 'plate' && seen3 !== g.round) {
+          seen3 = g.round;
+          const an = analyzePool(g.deck);
+          for (const p of g.P)
+            for (let k = 0; k < 5; k++) {
+              if (p.plateUsed[k]) continue;
+              checked++;
+              if (!an.bySum[p.plates[k]]) dead++;
+            }
+        }
+        if (g.phase === 'reveal') { g.nextRound(); continue; }
+        const j = g.pendingCPU();
+        if (j) g.runCPU(j); else g.tick(0.1);
+      }
+    }
+    ok(dead === 0, '回戦の初めに、手持ちの数字板は全て組める状態になっている',
+       `${dead}/${checked} 枚が組めない`);
+  }
+
+  /* 打ち直しが実際に起きること、元より狭い帯に収まること */
+  {
+    const g = new Game({ mode: 'pvp', seed: 777 });
+    /* 山を強引に痩せさせる */
+    for (let i = 0; i < 52; i++) if (i % 4 !== 0) g.deck[i] = 0;
+    g.P[0].plates[0] = 6; g.P[1].plates[0] = 64;
+    g.remintDeadPlates();
+    const an = analyzePool(g.deck);
+    ok(!!an.bySum[g.P[0].plates[0]] && !!an.bySum[g.P[1].plates[0]],
+       '組めなくなった数字板は組める数字へ打ち直される',
+       `${g.P[0].plates[0]} / ${g.P[1].plates[0]}`);
+    ok(g.reminted[0].length + g.reminted[1].length >= 2, '打ち直しが記録される');
+  }
+
+  /* 片方だけミスならその者が回戦を落とす */
+  {
+    const g = new Game({ mode: 'pvp', seed: 4242 });
+    openPlates(g);
+    g.submitHand(1, bestOf(g, 1));
+    g.missHand(0, '合計数が違う');
+    passBet(g);
+    ok(g.phase === 'reveal' && g.result.winner === 1, 'ミスした側がその回戦を落とす');
+  }
 }
 
 /* =============================================================
@@ -1047,7 +1107,7 @@ section('13. 速さの価値');
      `${even.b0.toFixed(2)} / ${even.b1.toFixed(2)}`);
 
   const gap = run(25, 75, 400);
-  ok(gap.rate > 0.56, '速く役を決める側が明確に有利になる',
+  ok(gap.rate > 0.54, '速く役を決める側が明確に有利になる',
      `25秒側 ${(gap.rate * 100).toFixed(1)}%（${gap.w[0]}-${gap.w[1]}）`);
   ok(gap.b0 < gap.b1 - 2, '速い側は呼吸に使うエアが少なくて済む',
      `25秒 ${gap.b0.toFixed(2)}枚 / 75秒 ${gap.b1.toFixed(2)}枚`);

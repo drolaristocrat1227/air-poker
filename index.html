@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="1.11.0">
+<meta name="app-version" content="1.12.0">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#04141a">
 <title>エア・ポーカー</title>
@@ -511,7 +511,8 @@ details.info .body b{color:var(--bone);font-weight:500}
     <ul>
       <li>各自に<b>5枚の金属板</b>が配られる。刻まれているのは数字だけ。毎回戦1枚ずつ、<b>30秒以内</b>に場にオープンする。時間が来れば1枚が勝手に押し出される。</li>
       <li>数字を開いたら<b>先に役を組み</b>、そのうえでベットに入る。<b>降りても出した5枚は戻らない</b>。</li>
-      <li>数字は <b>6〜64</b> の全域から無作為に配られる。端に寄った数字ほど組める役は限られ、札が減れば<b>組めなくなる</b>。どの順で切るかが勝負を決める。</li>
+      <li>数字は <b>6〜64</b> の全域から配られる。ただし端に寄った数字は各自2枚までで、残り3枚は終盤まで組める中核帯（24〜48）から配られる。</li>
+      <li>山が痩せて<b>もう組めなくなった数字板は、その回戦の初めに打ち直される</b>。必ず組める数字にはなるが、元の数字が持っていた見込み（強い役を作れる可能性）は失われる。<b>端の数字を抱え込めば、ただの平凡な数字に化ける。</b></li>
       <li>参加料は1回戦目が<b>1エア</b>、以降1エアずつ増える（1・2・3・4・5）。</li>
       <li>ベットタイムは<b>30秒</b>。一度にレイズできる枚数は<b>場のエア総数の半分</b>まで。時間が来たらそれ以上レイズできない。</li>
     </ul>
@@ -519,14 +520,15 @@ details.info .body b{color:var(--bone);font-weight:500}
     <h3>2階 ─ 役作り</h3>
     <ul>
       <li>ジョーカーを除く<b>1セットのトランプ</b>から5枚を選び、その合計数を<b>オープンした数字に一致</b>させる。</li>
+      <li><b>トランプは1組を二人で使う。</b>どちらが使った札も山から消え、二度と戻らない。1回戦でおよそ10枚が失われる。</li>
       <li>制限時間は<b>100秒</b>。作った役の強弱で勝敗が決まる。</li>
       <li>A=1、J=11、Q=12、K=13として合計する。役の強さは通常のポーカーに準じ、A は最強のランクとして扱う。</li>
-      <li>一度使った札はその後の勝負で使えない。回を重ねるごとに選択肢は枯れていく。</li>
+      <li>一度使った札はその後の勝負で使えない。同じ山から選ぶので、回を重ねるごとに選択肢は急速に枯れていく。</li>
       <li><b>ミス</b>＝100秒超過／合計数の不一致／使用済み札の再使用。ミスした側はその回戦を落とす。双方ミスなら、<b>ベットのあと交互に</b>もう一度100秒が与えられる。</li>
     </ul>
 
     <h3>天災</h3>
-    <p>互いが選んだ札が<b>1枚以上重複</b>していた場合に発動。その勝負で負けた側は、<b>奪われたエアと同数の残りエア</b>をさらに失う。失われたエアは勝者の手に渡らず、そのまま<b>水中へ消える</b>。</p>
+    <p><b>二人は同じ山から選んでいる。</b>だから札が重なる。互いが選んだ札が<b>1枚以上重複</b>していた場合に発動。その勝負で負けた側は、<b>奪われたエアと同数の残りエア</b>をさらに失う。失われたエアは勝者の手に渡らず、そのまま<b>水中へ消える</b>。</p>
 
     <h3>暗算モード（原作準拠）</h3>
     <p>タイトル画面の「盤面」を切り替えると、2階の条件が原作どおりになる。</p>
@@ -656,7 +658,7 @@ details.info .body b{color:var(--bone);font-weight:500}
           <button class="btn pri" id="bd-ok" disabled>決定</button>
         </div>
         <details class="info">
-          <summary>相手の情報 / 使用済みの札</summary>
+          <summary>相手の情報 / 山の残り</summary>
           <div class="body" id="bd-info"></div>
         </details>
       </div>
@@ -722,6 +724,11 @@ var O2_PER_CHIP=100;              /* エア1枚＝100秒ぶんの酸素 */
 var DRAIN=100/O2_PER_CHIP;        /* %/秒 */
 var MAX_ATTEMPT=3;                /* 双方ミス時の再挑戦上限 */
 var PLATE_LO=6, PLATE_HI=64;      /* 5枚で作れる合計数の全域 */
+/* 1組のトランプを共有すると、山は1回戦で10枚近く痩せる。
+   端に寄った数字は早い回戦でしか組めなくなるので、
+   「早めに切る用」と「終盤まで持てる用」を混ぜて配る。 */
+var CORE_LO=24, CORE_HI=48;       /* 終盤まで残る中核帯 */
+var WIDE_PER_HAND=2;              /* 端に寄った数字は各自2枚まで */
 var SF_SUMS=[15,20,25,30,35,40,45,50,55,47];   /* ストレートフラッシュを組める合計 */
 
 var DIFF={
@@ -1004,10 +1011,11 @@ function cpuPlate(g,pi){
   var pool=[];
   for(var n=PLATE_LO;n<=PLATE_HI;n++) if(g.playedNums.indexOf(n)<0) pool.push(n);
 
-  var score=[];
+  var score=[], feasible=0;
   for(i=0;i<rem.length;i++){
     var cands=an.bySum[me.plates[rem[i]]];
-    if(!cands||!cands.length){score.push({i:rem[i],s:-1});continue;}
+    if(!cands||!cands.length){score.push({i:rem[i],s:-1,dead:true});continue;}
+    feasible++;
     var k=cands[0].key, w=0;
     for(var q=0;q<pool.length;q++){
       var oc=oan.bySum[pool[q]];
@@ -1017,6 +1025,8 @@ function cpuPlate(g,pi){
     }
     score.push({i:rem[i], s:pool.length?w/pool.length:0});
   }
+  /* 組めない数字は選ばない。全部組めないときだけ諦めて選ぶ。 */
+  if(feasible) score=score.filter(function(x){return !x.dead;});
   score.sort(function(a,b){return a.s-b.s;});            /* 弱い順 */
   var N=score.length;
   var target=(g.round-1)/(MAX_ROUNDS-1)*(N-1);           /* 序盤は温存、終盤に本命 */
@@ -1040,6 +1050,10 @@ function Game(opt){
 
   var names = this.mode==='pvp' ? ['プレイヤー1','プレイヤー2']
                                 : ['あなた', DIFF[this.diff].label];
+  /* 原作どおり、1セットのトランプを両者で使う。
+     同じ配列を共有するので、どちらが使っても双方の山から消える。
+     互いに同じ山から選ぶからこそ、札が重なる＝天災が起こりうる。 */
+  this.deck=new Uint8Array(52).fill(1);
   var plates=this.dealPlates();
   this.P=[];
   for(var i=0;i<2;i++){
@@ -1047,7 +1061,7 @@ function Game(opt){
       idx:i, name:names[i], isCPU:(this.mode==='cpu'&&i===1),
       chips:START_AIR, o2:100, burned:0, wins:0, thought:0, lastBuild:0,
       plates:plates[i], plateUsed:[false,false,false,false,false],
-      avail:new Uint8Array(52).fill(1),
+      avail:this.deck,        /* 両者で同じ山を指す */
       committed:0, folded:false, allIn:false,
       target:0, hasSol:false, plan:null, hand:null, laid:null, missed:false, missReason:'',
       dead:false, drowning:false
@@ -1070,12 +1084,42 @@ Game.prototype.shuffle=function(a){
    極端な数字（6 や 64 など）は組める役がごく限られ、札が減れば組めなくなる。
    いつ切るかが勝負どころになる。 */
 Game.prototype.dealPlates=function(){
-  var pool=[],n;
-  for(n=PLATE_LO;n<=PLATE_HI;n++) pool.push(n);
-  this.shuffle(pool);
-  var a=[],b=[];
-  for(var i=0;i<10;i++) (i%2?b:a).push(pool[i]);
-  return [this.shuffle(a),this.shuffle(b)];
+  var wide=[], core=[], n;
+  for(n=PLATE_LO;n<=PLATE_HI;n++) (n<CORE_LO||n>CORE_HI?wide:core).push(n);
+  this.shuffle(wide); this.shuffle(core);
+  var a=[], b=[], i;
+  /* 端の数字は各自 WIDE_PER_HAND 枚。残りは中核帯から。 */
+  for(i=0;i<WIDE_PER_HAND*2;i++) (i%2?b:a).push(wide[i]);
+  var need=5-WIDE_PER_HAND;
+  for(i=0;i<need*2;i++) (i%2?b:a).push(core[i]);
+  return [this.shuffle(a), this.shuffle(b)];
+};
+
+/* 山が痩せて組めなくなった数字板は、その場で打ち直す。
+   1組のトランプを共有する以上、終盤は作れる合計が狭い帯に寄る。
+   打ち直された数字は必ず組めるが、元の数字が持っていた見込み（役の強さ）は失われる。
+   ＝端の数字を抱え込むと、ただの平凡な数字に化ける。 */
+Game.prototype.remintDeadPlates=function(){
+  var an=analyzePool(this.deck);
+  var live=[];
+  for(var n=PLATE_LO;n<=PLATE_HI;n++) if(an.bySum[n]) live.push(n);
+  if(!live.length) return;
+  for(var i=0;i<2;i++){
+    var p=this.P[i];
+    for(var k=0;k<5;k++){
+      if(p.plateUsed[k]) continue;
+      if(an.bySum[p.plates[k]]) continue;
+      var pick=null, tries=0;
+      while(tries++<40){
+        var v=live[(this.rnd()*live.length)|0];
+        if(p.plates.indexOf(v)<0){ pick=v; break; }
+      }
+      if(pick===null) pick=live[(this.rnd()*live.length)|0];
+      this.reminted[i].push({from:p.plates[k],to:pick});
+      this.pushLog(p.name,'数字板 '+p.plates[k]+' は もう組めない ─ '+pick+' に打ち直された');
+      p.plates[k]=pick;
+    }
+  }
 };
 
 Game.prototype.pot=function(){return this.P[0].committed+this.P[1].committed+this.carry;};
@@ -1124,6 +1168,8 @@ Game.prototype.startRound=function(){
     if(p.chips===0) p.allIn=true;
   }
   this.ante=ante; this.attempt=1; this.result=null; this.postBet=false; this.buildAlt=false;
+  this.reminted=[[],[]];
+  this.remintDeadPlates();
   this.plateSel=[null,null];
   this.plateClock=[PLATE_TIME,PLATE_TIME];
   this.submitted=[false,false];
@@ -1560,6 +1606,7 @@ GLOBAL.AP={
   START_AIR:START_AIR, MAX_ROUNDS:MAX_ROUNDS, BET_TIME:BET_TIME, BUILD_TIME:BUILD_TIME,
   FORCE_TIME:FORCE_TIME, PLATE_TIME:PLATE_TIME, THINK_MULT:THINK_MULT,
   O2_PER_CHIP:O2_PER_CHIP, PLATE_LO:PLATE_LO, PLATE_HI:PLATE_HI,
+  CORE_LO:CORE_LO, CORE_HI:CORE_HI, WIDE_PER_HAND:WIDE_PER_HAND,
   mulberry32:mulberry32
 };
 })(typeof globalThis!=='undefined'?globalThis:this);
@@ -2238,12 +2285,22 @@ function showPlate(pi){
     (function(idx){ b.onclick=function(){ G.selectPlate(pi,idx); }; })(i);
     list.appendChild(b);
   }
+  var left=0;
+  for(var q=0;q<52;q++) if(G.deck[q]) left++;
+  var rm=G.reminted[pi], rmTxt='';
+  if(rm&&rm.length){
+    var ps=[];
+    for(var z=0;z<rm.length;z++) ps.push(rm[z].from+' → <b>'+rm[z].to+'</b>');
+    rmTxt='<br><span style="color:var(--brass)">山が痩せて組めなくなった板を打ち直した ── '+
+          ps.join('、')+'</span>';
+  }
   el('plate-note').innerHTML=
     '参加料 <b>'+G.ante+'</b> エアは支払い済み。'+
     (G.carry?' 前回戦からの持ち越し <b>'+G.carry+'</b> エアが場にある。':'')+
     '<br>この数字が、2階で組む5枚の<b>合計</b>になる。持ち時間は <b>30秒</b>。'+
     '選び終わるまで酸素は<b>倍の速さ</b>で減る。'+
-    '<br>両端に寄った数字ほど組める役は限られ、札が減れば<b>組めなくなる</b>。切る順番が勝負を決める。';
+    '<br>トランプは<b>1組を二人で使う</b>。山の残りは <b>'+left+'</b> 枚。'+
+    '端に寄った数字は早いうちにしか組めない。'+rmTxt;
 }
 
 /* ---------- ベット ---------- */
@@ -2421,13 +2478,14 @@ function buildInfo(pi){
   var op=G.P[1-pi], used=[], i;
   if(G.blind){
     el('bd-info').innerHTML='<b>'+op.name+'</b> の目標数字は <b>'+op.target+'</b>。<br>'+
-      '暗算モードでは、互いに使い切った札は明かされない。<br>'+
+      '暗算モードでは、山から消えた札は明かされない。<br>'+
       '使用済みの札を出す、合計を間違える、100秒を過ぎる ── いずれも<b>ミス</b>で回戦を落とす。';
     return;
   }
-  for(i=0;i<52;i++) if(!op.avail[i]) used.push(i);
+  for(i=0;i<52;i++) if(!G.deck[i]) used.push(i);
   var s='<b>'+op.name+'</b> の目標数字は <b>'+op.target+'</b>。<br>';
-  s+=op.name+' が使い切った札（'+used.length+'枚）<br><span class="usedline">';
+  s+='<b>トランプは1組を二人で使う。</b>どちらが使った札も、二度と戻らない。<br>';
+  s+='山から消えた札（'+used.length+'枚／残り '+(52-used.length)+'枚）<br><span class="usedline">';
   if(!used.length) s+='まだ無し';
   else{
     var parts=[];
@@ -2435,7 +2493,8 @@ function buildInfo(pi){
       parts.push('<span class="'+(A.isRed(used[i])?'r':'')+'">'+A.cardStr(used[i])+'</span>');
     s+=parts.join('　');
   }
-  s+='</span><br><br>自分が使い切った札は盤面で×印。互いの札が1枚でも重なれば<b>天災</b>が発動する。';
+  s+='</span><br><br>消えた札は盤面で×印。同じ山から選ぶので、'+
+     '互いの札が1枚でも重なれば<b>天災</b>が発動する。';
   el('bd-info').innerHTML=s;
 }
 el('bd-clear').onclick=function(){ ui.sel=[]; refreshBuild(); };

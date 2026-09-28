@@ -7,7 +7,7 @@
    ============================================================= */
 'use strict';
 
-var VERSION = '1.11.0';
+var VERSION = '1.12.0';
 var CACHE   = 'air-poker-' + VERSION;
 var CORE = [
   './',
